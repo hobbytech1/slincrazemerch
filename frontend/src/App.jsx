@@ -11,6 +11,7 @@ function App() {
   const [hook, setHook] = useState("jatta jatta. ny drop.");
   const [format, setFormat] = useState("Instagram Post");
   const [designStyle, setDesignStyle] = useState("Dark");
+  const [imageVariation, setImageVariation] = useState("Auto");
   const [dailyPlan, setDailyPlan] = useState([]);
   const canvasRef = useRef(null);
 
@@ -52,6 +53,11 @@ function App() {
     return products[Math.floor(Math.random() * products.length)];
   }
 
+  function pickRandomVariation() {
+    const variations = ["Center", "Zoom", "Left", "Right", "Top", "Chaos"];
+    return variations[Math.floor(Math.random() * variations.length)];
+  }
+
   function generateDailyPlan() {
     if (products.length === 0) {
       alert("Ingen produkter lastet inn ennå");
@@ -65,7 +71,8 @@ function App() {
         format: "Instagram Post",
         platform: "Instagram + Facebook",
         hook: "jatta jatta. dagens første drop.",
-        designStyle: "Dark"
+        designStyle: "Dark",
+        imageVariation: "Center"
       },
       {
         time: "12:00",
@@ -73,7 +80,8 @@ function App() {
         format: "Snapchat Story",
         platform: "Snapchat",
         hook: "snap this fit 😭🔥",
-        designStyle: "Chaos"
+        designStyle: "Chaos",
+        imageVariation: "Chaos"
       },
       {
         time: "16:00",
@@ -81,7 +89,8 @@ function App() {
         format: "TikTok",
         platform: "TikTok",
         hook: "bygdefæst energi.",
-        designStyle: "Cinematic"
+        designStyle: "Cinematic",
+        imageVariation: "Zoom"
       },
       {
         time: "20:00",
@@ -89,7 +98,8 @@ function App() {
         format: "Instagram Story",
         platform: "Instagram + Facebook",
         hook: "kveldens merch drop.",
-        designStyle: "Magazine"
+        designStyle: "Magazine",
+        imageVariation: "Top"
       }
     ];
 
@@ -102,6 +112,7 @@ function App() {
         platform: slot.platform,
         format: slot.format,
         designStyle: slot.designStyle,
+        imageVariation: slot.imageVariation,
         productName: product?.name || "Ukjent produkt",
         productUrl: product?.url || "",
         imageUrl: product?.imageUrl || "",
@@ -121,6 +132,7 @@ function App() {
     setHook(post.hook);
     setFormat(post.format);
     setDesignStyle(post.designStyle || "Dark");
+    setImageVariation(post.imageVariation || "Auto");
 
     const productIndex = products.findIndex(
       (product) => product.name === post.productName
@@ -196,7 +208,52 @@ function App() {
     });
   }
 
-  function drawImageCover(ctx, image, size) {
+  function getVariationSettings() {
+    const actualVariation =
+      imageVariation === "Auto" ? pickRandomVariation() : imageVariation;
+
+    const settings = {
+      variation: actualVariation,
+      zoom: 1,
+      offsetX: 0,
+      offsetY: 0,
+      rotation: 0,
+      blurBackground: false,
+      darken: 0.15,
+      vignette: true
+    };
+
+    if (actualVariation === "Zoom") {
+      settings.zoom = 1.22;
+      settings.darken = 0.28;
+    }
+
+    if (actualVariation === "Left") {
+      settings.zoom = 1.1;
+      settings.offsetX = -0.18;
+    }
+
+    if (actualVariation === "Right") {
+      settings.zoom = 1.1;
+      settings.offsetX = 0.18;
+    }
+
+    if (actualVariation === "Top") {
+      settings.zoom = 1.12;
+      settings.offsetY = -0.16;
+    }
+
+    if (actualVariation === "Chaos") {
+      settings.zoom = 1.18;
+      settings.rotation = Math.random() > 0.5 ? 0.035 : -0.035;
+      settings.blurBackground = true;
+      settings.darken = 0.35;
+    }
+
+    return settings;
+  }
+
+  function drawImageCover(ctx, image, size, settings) {
     const imageRatio = image.width / image.height;
     const canvasRatio = size.width / size.height;
 
@@ -208,14 +265,100 @@ function App() {
     if (imageRatio > canvasRatio) {
       drawHeight = size.height;
       drawWidth = size.height * imageRatio;
-      drawX = (size.width - drawWidth) / 2;
     } else {
       drawWidth = size.width;
       drawHeight = size.width / imageRatio;
-      drawY = (size.height - drawHeight) / 2;
     }
 
+    drawWidth *= settings.zoom;
+    drawHeight *= settings.zoom;
+
+    drawX = (size.width - drawWidth) / 2 + size.width * settings.offsetX;
+    drawY = (size.height - drawHeight) / 2 + size.height * settings.offsetY;
+
+    if (settings.blurBackground) {
+      ctx.save();
+      ctx.filter = "blur(22px)";
+      ctx.drawImage(image, -40, -40, size.width + 80, size.height + 80);
+      ctx.restore();
+
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fillRect(0, 0, size.width, size.height);
+    }
+
+    ctx.save();
+    ctx.translate(size.width / 2, size.height / 2);
+    ctx.rotate(settings.rotation);
+    ctx.translate(-size.width / 2, -size.height / 2);
     ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+    ctx.restore();
+
+    if (settings.darken > 0) {
+      ctx.fillStyle = `rgba(0,0,0,${settings.darken})`;
+      ctx.fillRect(0, 0, size.width, size.height);
+    }
+
+    if (settings.vignette) {
+      const gradient = ctx.createRadialGradient(
+        size.width / 2,
+        size.height / 2,
+        size.width * 0.2,
+        size.width / 2,
+        size.height / 2,
+        size.width * 0.75
+      );
+
+      gradient.addColorStop(0, "rgba(0,0,0,0)");
+      gradient.addColorStop(1, "rgba(0,0,0,0.55)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size.width, size.height);
+    }
+
+    return settings.variation;
+  }
+
+  function drawStickers(ctx, size) {
+    const stickers = ["NEW", "DROP", "😭🔥", "JATTA", "LIMITED", "FIT CHECK"];
+    const stickerCount = 3;
+
+    for (let i = 0; i < stickerCount; i++) {
+      const text = stickers[Math.floor(Math.random() * stickers.length)];
+      const x = Math.random() * size.width * 0.7 + size.width * 0.12;
+      const y = Math.random() * size.height * 0.45 + size.height * 0.12;
+      const rotation = Math.random() * 0.35 - 0.17;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = Math.round(size.width * 0.006);
+      ctx.font = `bold ${Math.round(size.width * 0.055)}px Arial`;
+      ctx.textAlign = "center";
+
+      const metrics = ctx.measureText(text);
+      const padding = Math.round(size.width * 0.025);
+
+      ctx.fillRect(
+        -metrics.width / 2 - padding,
+        -Math.round(size.width * 0.05),
+        metrics.width + padding * 2,
+        Math.round(size.width * 0.075)
+      );
+
+      ctx.strokeRect(
+        -metrics.width / 2 - padding,
+        -Math.round(size.width * 0.05),
+        metrics.width + padding * 2,
+        Math.round(size.width * 0.075)
+      );
+
+      ctx.fillStyle = "black";
+      ctx.fillText(text, 0, 0);
+
+      ctx.restore();
+    }
   }
 
   function drawDarkStyle(ctx, size, isVertical) {
@@ -283,7 +426,7 @@ function App() {
   function drawMinimalStyle(ctx, size) {
     const padding = Math.round(size.width * 0.055);
 
-    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.fillRect(0, 0, size.width, size.height);
 
     ctx.textAlign = "left";
@@ -304,11 +447,7 @@ function App() {
   }
 
   function drawChaosStyle(ctx, size, isVertical) {
-    const gradient = ctx.createLinearGradient(0, 0, size.width, size.height);
-    gradient.addColorStop(0, "rgba(0,0,0,0.2)");
-    gradient.addColorStop(1, "rgba(0,0,0,0.75)");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, size.width, size.height);
+    drawStickers(ctx, size);
 
     const boxWidth = Math.round(size.width * 0.86);
     const boxHeight = isVertical
@@ -352,12 +491,12 @@ function App() {
   function drawMagazineStyle(ctx, size, isVertical) {
     const border = Math.round(size.width * 0.045);
 
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.fillRect(0, 0, size.width, size.height);
+
     ctx.strokeStyle = "white";
     ctx.lineWidth = Math.round(size.width * 0.018);
     ctx.strokeRect(border, border, size.width - border * 2, size.height - border * 2);
-
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
-    ctx.fillRect(0, 0, size.width, size.height);
 
     ctx.textAlign = "center";
     ctx.fillStyle = "white";
@@ -391,6 +530,7 @@ function App() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     const size = getCanvasSize();
+    const settings = getVariationSettings();
 
     canvas.width = size.width;
     canvas.height = size.height;
@@ -402,7 +542,7 @@ function App() {
     image.crossOrigin = "anonymous";
 
     image.onload = () => {
-      drawImageCover(ctx, image, size);
+      const usedVariation = drawImageCover(ctx, image, size, settings);
 
       const isVertical =
         format === "TikTok" ||
@@ -430,7 +570,7 @@ function App() {
       }
 
       ctx.textAlign = "left";
-      setStatus(`Promo-bilde generert: ${designStyle}`);
+      setStatus(`Promo-bilde generert: ${designStyle} / ${usedVariation}`);
     };
 
     image.onerror = () => {
@@ -451,9 +591,9 @@ function App() {
     }
 
     const link = document.createElement("a");
-    link.download = `slincraze-${designStyle.toLowerCase()}-${format
+    link.download = `slincraze-${designStyle.toLowerCase()}-${imageVariation
       .toLowerCase()
-      .replaceAll(" ", "-")}.png`;
+      .replaceAll(" ", "-")}-${format.toLowerCase().replaceAll(" ", "-")}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
   }
@@ -635,6 +775,7 @@ function App() {
                   <strong>{post.productName}</strong>
                   <p>{post.format}</p>
                   <p>Design: {post.designStyle || "Dark"}</p>
+                  <p>Variation: {post.imageVariation || "Auto"}</p>
                   <p>Status: {post.status}</p>
 
                   <div style={styles.buttons}>
@@ -730,6 +871,24 @@ function App() {
                     key={item}
                     onClick={() => setDesignStyle(item)}
                     style={designStyle === item ? styles.button : styles.darkButton}
+                  >
+                    {item}
+                  </button>
+                )
+              )}
+            </div>
+
+            <label style={styles.label}>Bildevariasjon</label>
+
+            <div style={styles.formatRow}>
+              {["Auto", "Center", "Zoom", "Left", "Right", "Top", "Chaos"].map(
+                (item) => (
+                  <button
+                    key={item}
+                    onClick={() => setImageVariation(item)}
+                    style={
+                      imageVariation === item ? styles.button : styles.darkButton
+                    }
                   >
                     {item}
                   </button>
