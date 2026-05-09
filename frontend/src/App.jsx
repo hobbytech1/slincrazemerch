@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { generateCaption } from "./utils/captionGenerator";
+import { generateCaption as generateMerchCaption } from "./utils/captionGenerator";
 
 const BACKEND_URL = "https://slincrazemerch.onrender.com";
 
@@ -25,18 +25,6 @@ function App() {
     } catch {
       setStatus("Kunne ikke hente produkter");
     }
-  }
-
-  function generateCaption(product) {
-    if (!product) return;
-
-    const captions = [
-      `Jatta jatta 😏\n\n${product.name} e ute nu 🔥\n\n👉 ${product.url}\n\n#slincraze #merch`,
-      `Ny merch ute 👀\n\n${product.name}\n\n🛒 ${product.url}`,
-      `${product.name}\n\nFor dæ som skjønne viben 😮‍💨\n\n${product.url}`
-    ];
-
-    setCaption(captions[Math.floor(Math.random() * captions.length)]);
   }
 
   function generateHook(product) {
@@ -381,11 +369,12 @@ function App() {
             />
 
             <div style={styles.buttons}>
-<button
-  onClick={() => setCaption(generateCaption("humor"))}
->
-  Generer caption
-</button>
+              <button
+                style={styles.button}
+                onClick={() => setCaption(generateMerchCaption("humor"))}
+              >
+                Generer caption
+              </button>
 
               <button
                 style={styles.darkButton}
