@@ -10,6 +10,7 @@ function App() {
   const [caption, setCaption] = useState("");
   const [hook, setHook] = useState("jatta jatta. ny drop.");
   const [format, setFormat] = useState("Instagram Post");
+  const [designStyle, setDesignStyle] = useState("Dark");
   const [dailyPlan, setDailyPlan] = useState([]);
   const canvasRef = useRef(null);
 
@@ -63,28 +64,32 @@ function App() {
         type: "humor",
         format: "Instagram Post",
         platform: "Instagram + Facebook",
-        hook: "jatta jatta. dagens første drop."
+        hook: "jatta jatta. dagens første drop.",
+        designStyle: "Dark"
       },
       {
         time: "12:00",
         type: "music",
         format: "Snapchat Story",
         platform: "Snapchat",
-        hook: "snap this fit 😭🔥"
+        hook: "snap this fit 😭🔥",
+        designStyle: "Chaos"
       },
       {
         time: "16:00",
         type: "humor",
         format: "TikTok",
         platform: "TikTok",
-        hook: "bygdefæst energi."
+        hook: "bygdefæst energi.",
+        designStyle: "Cinematic"
       },
       {
         time: "20:00",
         type: "music",
         format: "Instagram Story",
         platform: "Instagram + Facebook",
-        hook: "kveldens merch drop."
+        hook: "kveldens merch drop.",
+        designStyle: "Magazine"
       }
     ];
 
@@ -96,6 +101,7 @@ function App() {
         time: slot.time,
         platform: slot.platform,
         format: slot.format,
+        designStyle: slot.designStyle,
         productName: product?.name || "Ukjent produkt",
         productUrl: product?.url || "",
         imageUrl: product?.imageUrl || "",
@@ -114,6 +120,7 @@ function App() {
     setCaption(post.caption);
     setHook(post.hook);
     setFormat(post.format);
+    setDesignStyle(post.designStyle || "Dark");
 
     const productIndex = products.findIndex(
       (product) => product.name === post.productName
@@ -189,6 +196,195 @@ function App() {
     });
   }
 
+  function drawImageCover(ctx, image, size) {
+    const imageRatio = image.width / image.height;
+    const canvasRatio = size.width / size.height;
+
+    let drawWidth = size.width;
+    let drawHeight = size.height;
+    let drawX = 0;
+    let drawY = 0;
+
+    if (imageRatio > canvasRatio) {
+      drawHeight = size.height;
+      drawWidth = size.height * imageRatio;
+      drawX = (size.width - drawWidth) / 2;
+    } else {
+      drawWidth = size.width;
+      drawHeight = size.width / imageRatio;
+      drawY = (size.height - drawHeight) / 2;
+    }
+
+    ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+  }
+
+  function drawDarkStyle(ctx, size, isVertical) {
+    const overlayHeight = isVertical
+      ? Math.round(size.height * 0.2)
+      : Math.round(size.height * 0.24);
+
+    const overlayY = isVertical
+      ? Math.round(size.height * 0.68)
+      : size.height - overlayHeight;
+
+    ctx.fillStyle = "rgba(0,0,0,0.72)";
+    ctx.fillRect(0, overlayY, size.width, overlayHeight);
+
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+
+    const fontSize = isVertical
+      ? Math.round(size.width * 0.085)
+      : Math.round(size.width * 0.06);
+
+    ctx.font = `bold ${fontSize}px Arial`;
+
+    drawCenteredWrappedText(
+      ctx,
+      hook,
+      size.width / 2,
+      overlayY + overlayHeight / 2 - 18,
+      Math.round(size.width * 0.82),
+      Math.round(fontSize * 1.18)
+    );
+
+    ctx.font = `${Math.round(size.width * 0.033)}px Arial`;
+    ctx.fillStyle = "rgba(255,255,255,0.82)";
+    ctx.fillText("slincraze.myspreadshop.no", size.width / 2, overlayY + overlayHeight - 32);
+  }
+
+  function drawCinematicStyle(ctx, size, isVertical) {
+    ctx.fillStyle = "rgba(0,0,0,0.38)";
+    ctx.fillRect(0, 0, size.width, size.height);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "white";
+
+    const fontSize = isVertical
+      ? Math.round(size.width * 0.095)
+      : Math.round(size.width * 0.07);
+
+    ctx.font = `bold ${fontSize}px Arial`;
+
+    drawCenteredWrappedText(
+      ctx,
+      hook.toUpperCase(),
+      size.width / 2,
+      size.height / 2,
+      Math.round(size.width * 0.78),
+      Math.round(fontSize * 1.15)
+    );
+
+    ctx.font = `${Math.round(size.width * 0.032)}px Arial`;
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.fillText("SLINCRAZE MERCH", size.width / 2, size.height - Math.round(size.height * 0.08));
+  }
+
+  function drawMinimalStyle(ctx, size) {
+    const padding = Math.round(size.width * 0.055);
+
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.fillRect(0, 0, size.width, size.height);
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "white";
+    ctx.font = `bold ${Math.round(size.width * 0.046)}px Arial`;
+
+    const lines = getWrappedLines(ctx, hook, Math.round(size.width * 0.62));
+    let y = padding + Math.round(size.width * 0.045);
+
+    lines.forEach((line) => {
+      ctx.fillText(line, padding, y);
+      y += Math.round(size.width * 0.055);
+    });
+
+    ctx.font = `${Math.round(size.width * 0.028)}px Arial`;
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fillText("slincraze.myspreadshop.no", padding, size.height - padding);
+  }
+
+  function drawChaosStyle(ctx, size, isVertical) {
+    const gradient = ctx.createLinearGradient(0, 0, size.width, size.height);
+    gradient.addColorStop(0, "rgba(0,0,0,0.2)");
+    gradient.addColorStop(1, "rgba(0,0,0,0.75)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size.width, size.height);
+
+    const boxWidth = Math.round(size.width * 0.86);
+    const boxHeight = isVertical
+      ? Math.round(size.height * 0.22)
+      : Math.round(size.height * 0.28);
+
+    const boxX = Math.round((size.width - boxWidth) / 2);
+    const boxY = isVertical
+      ? Math.round(size.height * 0.62)
+      : Math.round(size.height * 0.58);
+
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = Math.round(size.width * 0.01);
+    ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "black";
+
+    const fontSize = isVertical
+      ? Math.round(size.width * 0.09)
+      : Math.round(size.width * 0.065);
+
+    ctx.font = `bold ${fontSize}px Arial`;
+
+    drawCenteredWrappedText(
+      ctx,
+      hook,
+      size.width / 2,
+      boxY + boxHeight / 2 - 10,
+      Math.round(boxWidth * 0.84),
+      Math.round(fontSize * 1.1)
+    );
+
+    ctx.font = `bold ${Math.round(size.width * 0.036)}px Arial`;
+    ctx.fillText("😭🔥 JATTA JATTA", size.width / 2, boxY + boxHeight - 28);
+  }
+
+  function drawMagazineStyle(ctx, size, isVertical) {
+    const border = Math.round(size.width * 0.045);
+
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = Math.round(size.width * 0.018);
+    ctx.strokeRect(border, border, size.width - border * 2, size.height - border * 2);
+
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(0, 0, size.width, size.height);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "white";
+
+    ctx.font = `bold ${Math.round(size.width * 0.045)}px Arial`;
+    ctx.fillText("SLINCRAZE", size.width / 2, border + Math.round(size.width * 0.065));
+
+    const fontSize = isVertical
+      ? Math.round(size.width * 0.075)
+      : Math.round(size.width * 0.055);
+
+    ctx.font = `bold ${fontSize}px Arial`;
+
+    drawCenteredWrappedText(
+      ctx,
+      hook,
+      size.width / 2,
+      size.height - Math.round(size.height * 0.2),
+      Math.round(size.width * 0.76),
+      Math.round(fontSize * 1.15)
+    );
+
+    ctx.font = `${Math.round(size.width * 0.028)}px Arial`;
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.fillText("MERCH DROP", size.width / 2, size.height - border - Math.round(size.width * 0.03));
+  }
+
   function generatePromoImage() {
     if (!selectedProduct) return;
 
@@ -206,74 +402,35 @@ function App() {
     image.crossOrigin = "anonymous";
 
     image.onload = () => {
-      const imageRatio = image.width / image.height;
-      const canvasRatio = size.width / size.height;
-
-      let drawWidth = size.width;
-      let drawHeight = size.height;
-      let drawX = 0;
-      let drawY = 0;
-
-      if (imageRatio > canvasRatio) {
-        drawHeight = size.height;
-        drawWidth = size.height * imageRatio;
-        drawX = (size.width - drawWidth) / 2;
-      } else {
-        drawWidth = size.width;
-        drawHeight = size.width / imageRatio;
-        drawY = (size.height - drawHeight) / 2;
-      }
-
-      ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+      drawImageCover(ctx, image, size);
 
       const isVertical =
         format === "TikTok" ||
         format === "Instagram Story" ||
         format === "Snapchat Story";
 
-      const overlayHeight = isVertical
-        ? Math.round(size.height * 0.2)
-        : Math.round(size.height * 0.24);
+      if (designStyle === "Dark") {
+        drawDarkStyle(ctx, size, isVertical);
+      }
 
-      const overlayY = isVertical
-        ? Math.round(size.height * 0.68)
-        : size.height - overlayHeight;
+      if (designStyle === "Cinematic") {
+        drawCinematicStyle(ctx, size, isVertical);
+      }
 
-      ctx.fillStyle = "rgba(0,0,0,0.72)";
-      ctx.fillRect(0, overlayY, size.width, overlayHeight);
+      if (designStyle === "Minimal") {
+        drawMinimalStyle(ctx, size);
+      }
 
-      ctx.fillStyle = "white";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "alphabetic";
+      if (designStyle === "Chaos") {
+        drawChaosStyle(ctx, size, isVertical);
+      }
 
-      const fontSize = isVertical
-        ? Math.round(size.width * 0.085)
-        : Math.round(size.width * 0.06);
-
-      const lineHeight = Math.round(fontSize * 1.18);
-
-      ctx.font = `bold ${fontSize}px Arial`;
-
-      drawCenteredWrappedText(
-        ctx,
-        hook,
-        size.width / 2,
-        overlayY + overlayHeight / 2 - 18,
-        Math.round(size.width * 0.82),
-        lineHeight
-      );
-
-      ctx.font = `${Math.round(size.width * 0.033)}px Arial`;
-      ctx.fillStyle = "rgba(255,255,255,0.82)";
-      ctx.fillText(
-        "slincraze.myspreadshop.no",
-        size.width / 2,
-        overlayY + overlayHeight - 32
-      );
+      if (designStyle === "Magazine") {
+        drawMagazineStyle(ctx, size, isVertical);
+      }
 
       ctx.textAlign = "left";
-
-      setStatus("Promo-bilde generert");
+      setStatus(`Promo-bilde generert: ${designStyle}`);
     };
 
     image.onerror = () => {
@@ -294,7 +451,9 @@ function App() {
     }
 
     const link = document.createElement("a");
-    link.download = "slincraze-promo.png";
+    link.download = `slincraze-${designStyle.toLowerCase()}-${format
+      .toLowerCase()
+      .replaceAll(" ", "-")}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
   }
@@ -475,6 +634,7 @@ function App() {
                   <p>{post.platform}</p>
                   <strong>{post.productName}</strong>
                   <p>{post.format}</p>
+                  <p>Design: {post.designStyle || "Dark"}</p>
                   <p>Status: {post.status}</p>
 
                   <div style={styles.buttons}>
@@ -559,6 +719,22 @@ function App() {
                   {item}
                 </button>
               ))}
+            </div>
+
+            <label style={styles.label}>Designstil</label>
+
+            <div style={styles.formatRow}>
+              {["Dark", "Cinematic", "Minimal", "Chaos", "Magazine"].map(
+                (item) => (
+                  <button
+                    key={item}
+                    onClick={() => setDesignStyle(item)}
+                    style={designStyle === item ? styles.button : styles.darkButton}
+                  >
+                    {item}
+                  </button>
+                )
+              )}
             </div>
 
             <label style={styles.label}>Hook</label>
