@@ -7,54 +7,62 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const SHOP_URL = "https://slincraze.myspreadshop.no/all";
 
-app.use(cors());
+const SHOP_PAGES = [
+  "https://slincraze.myspreadshop.no/all",
+  "https://slincraze.myspreadshop.no/men",
+  "https://slincraze.myspreadshop.no/women",
+  "https://slincraze.myspreadshop.no/accessories",
+  "https://slincraze.myspreadshop.no/kids-babies"
+];
 
-app.get("/", (req, res) => {
-  res.send("SlinCraze backend running. Go to /api/products");
-});
+app.use(cors());
 
 app.get("/api/products", async (req, res) => {
   try {
-    const response = await axios.get(SHOP_URL, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 SlinCrazeMerchBot/1.0"
-      }
-    });
-
-    const $ = cheerio.load(response.data);
     const products = [];
 
-    $("img").each((_, element) => {
-      const src =
-        $(element).attr("src") ||
-        $(element).attr("data-src") ||
-        $(element).attr("data-original");
-
-      const alt = $(element).attr("alt");
-
-      if (!src || !alt) return;
-      if (alt.length < 3) return;
-
-      const imageUrl = src.startsWith("http")
-        ? src
-        : src.startsWith("//")
-          ? `https:${src}`
-          : `${SHOP_URL}${src}`;
-
-      products.push({
-        name: alt.trim(),
-        imageUrl,
-        url: SHOP_URL,
-        vibe: "SlinCraze merch"
+    for (const pageUrl of SHOP_PAGES) {
+      const response = await axios.get(pageUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 SlinCrazeMerchBot/1.0"
+        }
       });
-    });
+
+      const $ = cheerio.load(response.data);
+
+      $("img").each((_, element) => {
+        const src =
+          $(element).attr("src") ||
+          $(element).attr("data-src") ||
+          $(element).attr("data-original");
+
+        const alt = $(element).attr("alt");
+
+        if (!src || !alt) return;
+        if (alt.length < 3) return;
+        if (!alt.toLowerCase().includes("jatta") && !alt.toLowerCase().includes("slincraze")) return;
+
+        const imageUrl = src.startsWith("http")
+          ? src
+          : src.startsWith("//")
+            ? `https:${src}`
+            : `${pageUrl}${src}`;
+
+        products.push({
+          name: alt.trim(),
+          imageUrl,
+          url: SHOP_URL,
+          vibe: "SlinCraze merch"
+        });
+      });
+    }
 
     const uniqueProducts = products.filter(
       (product, index, array) =>
-        index === array.findIndex((p) => p.imageUrl === product.imageUrl)
+        index === array.findIndex((p) => p.name === product.name)
     );
 
-    res.json(uniqueProducts.slice(0, 30));
+    res.json(uniqueProducts.slice(0, 50));
   } catch (error) {
     console.error("Product fetch failed:", error.message);
 
