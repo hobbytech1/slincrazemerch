@@ -382,7 +382,7 @@ function App() {
             <div style={styles.buttons}>
               <button
                 style={styles.button}
-                onClick={() => generateCaption(selectedProduct)}
+                onClick={() => setCaption(generateCaption("humor"))}
               >
                 Generer caption
               </button>
