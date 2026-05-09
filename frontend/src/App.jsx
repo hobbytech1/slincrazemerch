@@ -10,6 +10,7 @@ function App() {
   const [caption, setCaption] = useState("");
   const [hook, setHook] = useState("jatta jatta. ny drop.");
   const [format, setFormat] = useState("Instagram Post");
+  const [dailyPlan, setDailyPlan] = useState([]);
   const canvasRef = useRef(null);
 
   const selectedProduct = products[selectedIndex];
@@ -39,6 +40,101 @@ function App() {
     ];
 
     setHook(hooks[Math.floor(Math.random() * hooks.length)]);
+  }
+
+  function pickRandomProduct() {
+    if (products.length === 0) return null;
+    return products[Math.floor(Math.random() * products.length)];
+  }
+
+  function generateDailyPlan() {
+    if (products.length === 0) {
+      alert("Ingen produkter lastet inn ennå");
+      return;
+    }
+
+    const slots = [
+      {
+        time: "09:00",
+        type: "humor",
+        format: "Instagram Post",
+        platform: "Instagram + Facebook",
+        hook: "jatta jatta. dagens første drop."
+      },
+      {
+        time: "12:00",
+        type: "music",
+        format: "Instagram Story",
+        platform: "Instagram + Facebook",
+        hook: "music merch for dæ som skjønne viben."
+      },
+      {
+        time: "16:00",
+        type: "humor",
+        format: "TikTok",
+        platform: "Instagram + Facebook",
+        hook: "bygdefæst energi."
+      },
+      {
+        time: "20:00",
+        type: "music",
+        format: "Instagram Post",
+        platform: "Instagram + Facebook",
+        hook: "kveldens merch drop."
+      }
+    ];
+
+    const newPlan = slots.map((slot, index) => {
+      const product = pickRandomProduct();
+
+      return {
+        id: Date.now() + index,
+        time: slot.time,
+        platform: slot.platform,
+        format: slot.format,
+        productName: product?.name || "Ukjent produkt",
+        productUrl: product?.url || "",
+        imageUrl: product?.imageUrl || "",
+        hook: slot.hook,
+        caption: `${generateMerchCaption(slot.type)}\n\n${product?.name || ""}\n${product?.url || ""}`,
+        status: "Planlagt"
+      };
+    });
+
+    setDailyPlan(newPlan);
+    localStorage.setItem("slincrazeDailyPlan", JSON.stringify(newPlan));
+    setStatus("Dagsplan generert med 4 innlegg");
+  }
+
+  function usePlannedPost(post) {
+    setCaption(post.caption);
+    setHook(post.hook);
+
+    const productIndex = products.findIndex(
+      (product) => product.name === post.productName
+    );
+
+    if (productIndex !== -1) {
+      setSelectedIndex(productIndex);
+    }
+
+    setFormat(post.format);
+    setStatus(`Valgte planlagt innlegg kl ${post.time}`);
+  }
+
+  function markAsPosted(postId) {
+    const updatedPlan = dailyPlan.map((post) =>
+      post.id === postId ? { ...post, status: "Postet" } : post
+    );
+
+    setDailyPlan(updatedPlan);
+    localStorage.setItem("slincrazeDailyPlan", JSON.stringify(updatedPlan));
+  }
+
+  function clearDailyPlan() {
+    setDailyPlan([]);
+    localStorage.removeItem("slincrazeDailyPlan");
+    setStatus("Dagsplan slettet");
   }
 
   function getCanvasSize() {
@@ -168,6 +264,11 @@ function App() {
 
   useEffect(() => {
     loadProducts();
+
+    const savedPlan = localStorage.getItem("slincrazeDailyPlan");
+    if (savedPlan) {
+      setDailyPlan(JSON.parse(savedPlan));
+    }
   }, []);
 
   const styles = {
@@ -210,6 +311,18 @@ function App() {
       display: "grid",
       gridTemplateColumns: "380px 1fr",
       gap: "24px"
+    },
+    planGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+      gap: "14px",
+      marginTop: "16px"
+    },
+    planCard: {
+      background: "#111",
+      border: "1px solid #333",
+      borderRadius: "18px",
+      padding: "16px"
     },
     label: {
       color: "#aaa",
@@ -297,6 +410,55 @@ function App() {
             Oppdater produkter
           </button>
         </header>
+
+        <section style={{ ...styles.card, marginBottom: "24px" }}>
+          <h2 style={{ marginTop: 0 }}>Dagens publiseringsplan</h2>
+          <p style={{ color: "#aaa" }}>
+            Lager 4 innlegg for Instagram og Facebook: 09:00, 12:00, 16:00 og 20:00.
+          </p>
+
+          <div style={styles.buttons}>
+            <button style={styles.button} onClick={generateDailyPlan}>
+              Generer dagsplan
+            </button>
+
+            <button style={styles.darkButton} onClick={clearDailyPlan}>
+              Slett dagsplan
+            </button>
+          </div>
+
+          {dailyPlan.length > 0 && (
+            <div style={styles.planGrid}>
+              {dailyPlan.map((post) => (
+                <div key={post.id} style={styles.planCard}>
+                  <h3 style={{ margin: "0 0 8px" }}>{post.time}</h3>
+                  <p style={{ color: "#aaa", margin: "0 0 8px" }}>
+                    {post.platform}
+                  </p>
+                  <strong>{post.productName}</strong>
+                  <p style={{ color: "#aaa" }}>{post.format}</p>
+                  <p>Status: {post.status}</p>
+
+                  <div style={styles.buttons}>
+                    <button
+                      style={styles.button}
+                      onClick={() => usePlannedPost(post)}
+                    >
+                      Bruk
+                    </button>
+
+                    <button
+                      style={styles.darkButton}
+                      onClick={() => markAsPosted(post.id)}
+                    >
+                      Marker postet
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <main style={styles.grid}>
           <section style={styles.card}>
