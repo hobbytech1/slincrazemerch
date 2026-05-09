@@ -4,30 +4,25 @@ const BACKEND_URL = "https://slincrazemerch.onrender.com";
 
 function App() {
   const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [status, setStatus] = useState("Laster produkter...");
   const [caption, setCaption] = useState("");
   const [hook, setHook] = useState("jatta jatta. ny drop.");
   const [format, setFormat] = useState("Instagram Post");
-
   const canvasRef = useRef(null);
+
+  const selectedProduct = products[selectedIndex];
 
   async function loadProducts() {
     try {
-      setStatus("Henter produkter fra backend...");
-
+      setStatus("Henter produkter...");
       const response = await fetch(`${BACKEND_URL}/api/products`);
       const data = await response.json();
-
       setProducts(data);
-
-      if (data.length > 0) {
-        setSelectedProduct(data[0]);
-      }
-
+      setSelectedIndex(0);
       setStatus(`Fant ${data.length} produkter`);
-    } catch (error) {
-      setStatus("Kunne ikke hente produkter fra backend");
+    } catch {
+      setStatus("Kunne ikke hente produkter");
     }
   }
 
@@ -35,25 +30,9 @@ function App() {
     if (!product) return;
 
     const captions = [
-      `Jatta jatta 😏
-
-${product.name} e ute nu 🔥
-
-👉 ${product.url}
-
-#slincraze #merch`,
-
-      `Ny merch ute 👀
-
-${product.name}
-
-🛒 ${product.url}`,
-
-      `${product.name}
-
-For dæ som skjønne viben 😮‍💨
-
-${product.url}`
+      `Jatta jatta 😏\n\n${product.name} e ute nu 🔥\n\n👉 ${product.url}\n\n#slincraze #merch`,
+      `Ny merch ute 👀\n\n${product.name}\n\n🛒 ${product.url}`,
+      `${product.name}\n\nFor dæ som skjønne viben 😮‍💨\n\n${product.url}`
     ];
 
     setCaption(captions[Math.floor(Math.random() * captions.length)]);
@@ -122,10 +101,6 @@ ${product.url}`
     const image = new Image();
     image.crossOrigin = "anonymous";
 
-    const proxiedImageUrl =
-      `${BACKEND_URL}/api/image-proxy?url=` +
-      encodeURIComponent(selectedProduct.imageUrl);
-
     image.onload = () => {
       const imageRatio = image.width / image.height;
       const canvasRatio = size.width / size.height;
@@ -149,7 +124,7 @@ ${product.url}`
 
       const overlayHeight = Math.round(size.height * 0.22);
 
-      ctx.fillStyle = "rgba(0,0,0,0.72)";
+      ctx.fillStyle = "rgba(0,0,0,0.75)";
       ctx.fillRect(0, size.height - overlayHeight, size.width, overlayHeight);
 
       ctx.fillStyle = "white";
@@ -175,11 +150,12 @@ ${product.url}`
     };
 
     image.onerror = () => {
-      setStatus("Kunne ikke laste bilde via backend image-proxy");
-      alert("Kunne ikke laste bilde via backend image-proxy");
+      setStatus("Kunne ikke laste bilde");
     };
 
-    image.src = proxiedImageUrl;
+    image.src =
+      `${BACKEND_URL}/api/image-proxy?url=` +
+      encodeURIComponent(selectedProduct.imageUrl);
   }
 
   function downloadPromoImage() {
@@ -197,187 +173,250 @@ ${product.url}`
   }
 
   async function copyCaption() {
-    try {
-      await navigator.clipboard.writeText(caption);
-      alert("Caption kopiert");
-    } catch (error) {
-      alert("Kunne ikke kopiere");
-    }
+    await navigator.clipboard.writeText(caption);
+    alert("Caption kopiert");
   }
 
   useEffect(() => {
     loadProducts();
   }, []);
 
+  const styles = {
+    page: {
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #070707, #181818)",
+      color: "#f5f5f5",
+      fontFamily: "Arial, sans-serif",
+      padding: "32px"
+    },
+    shell: {
+      maxWidth: "1200px",
+      margin: "0 auto"
+    },
+    header: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: "20px",
+      marginBottom: "28px"
+    },
+    title: {
+      margin: 0,
+      fontSize: "42px",
+      letterSpacing: "-1px",
+      color: "#fff"
+    },
+    sub: {
+      color: "#aaa",
+      marginTop: "8px"
+    },
+    card: {
+      background: "rgba(255,255,255,0.06)",
+      border: "1px solid rgba(255,255,255,0.12)",
+      borderRadius: "24px",
+      padding: "22px",
+      boxShadow: "0 20px 60px rgba(0,0,0,0.35)"
+    },
+    grid: {
+      display: "grid",
+      gridTemplateColumns: "380px 1fr",
+      gap: "24px"
+    },
+    label: {
+      color: "#aaa",
+      fontSize: "14px",
+      marginBottom: "8px",
+      display: "block"
+    },
+    select: {
+      width: "100%",
+      background: "#111",
+      color: "#fff",
+      border: "1px solid #444",
+      borderRadius: "14px",
+      padding: "14px",
+      fontSize: "15px",
+      marginBottom: "18px"
+    },
+    image: {
+      width: "100%",
+      borderRadius: "20px",
+      background: "#222",
+      marginBottom: "18px"
+    },
+    button: {
+      background: "#fff",
+      color: "#000",
+      border: "none",
+      borderRadius: "14px",
+      padding: "12px 16px",
+      cursor: "pointer",
+      fontWeight: "700"
+    },
+    darkButton: {
+      background: "#222",
+      color: "#fff",
+      border: "1px solid #444",
+      borderRadius: "14px",
+      padding: "12px 16px",
+      cursor: "pointer",
+      fontWeight: "700"
+    },
+    buttons: {
+      display: "flex",
+      gap: "10px",
+      flexWrap: "wrap",
+      marginTop: "16px"
+    },
+    textarea: {
+      width: "100%",
+      minHeight: "190px",
+      background: "#0f0f0f",
+      color: "#fff",
+      border: "1px solid #333",
+      borderRadius: "16px",
+      padding: "16px",
+      fontSize: "16px",
+      marginTop: "18px",
+      boxSizing: "border-box"
+    },
+    formatRow: {
+      display: "flex",
+      gap: "10px",
+      flexWrap: "wrap",
+      marginBottom: "20px"
+    },
+    canvas: {
+      width: "100%",
+      maxWidth: "520px",
+      background: "#222",
+      borderRadius: "20px",
+      marginTop: "22px"
+    }
+  };
+
   return (
-    <div
-      style={{
-        background: "#111",
-        color: "white",
-        minHeight: "100vh",
-        padding: "40px",
-        fontFamily: "Arial"
-      }}
-    >
-      <h1>SlinCraze Merch App</h1>
-      <p>{status}</p>
+    <div style={styles.page}>
+      <div style={styles.shell}>
+        <header style={styles.header}>
+          <div>
+            <h1 style={styles.title}>SlinCraze Merch Promoter</h1>
+            <p style={styles.sub}>{status}</p>
+          </div>
 
-      <button onClick={loadProducts}>Hent produkter på nytt</button>
+          <button style={styles.darkButton} onClick={loadProducts}>
+            Oppdater produkter
+          </button>
+        </header>
 
-      {selectedProduct && (
-        <div
-          style={{
-            marginTop: "30px",
-            marginBottom: "40px",
-            background: "#1b1b1b",
-            padding: "20px",
-            borderRadius: "20px",
-            border: "2px solid white"
-          }}
-        >
-          <h2>Valgt produkt</h2>
+        <main style={styles.grid}>
+          <section style={styles.card}>
+            <label style={styles.label}>Produktvalg</label>
 
-          <img
-            src={selectedProduct.imageUrl}
-            alt={selectedProduct.name}
-            style={{
-              width: "300px",
-              borderRadius: "18px"
-            }}
-          />
+            <select
+              style={styles.select}
+              value={selectedIndex}
+              onChange={(e) => setSelectedIndex(Number(e.target.value))}
+            >
+              {products.map((product, index) => (
+                <option key={index} value={index}>
+                  {product.name}
+                </option>
+              ))}
+            </select>
 
-          <h3>{selectedProduct.name}</h3>
+            {selectedProduct && (
+              <>
+                <img
+                  src={selectedProduct.imageUrl}
+                  alt={selectedProduct.name}
+                  style={styles.image}
+                />
 
-          <h3>Velg format</h3>
+                <h2 style={{ color: "#fff", marginBottom: "8px" }}>
+                  {selectedProduct.name}
+                </h2>
 
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            {["Instagram Post", "Instagram Story", "TikTok", "YouTube Thumbnail"].map(
-              (item) => (
-                <button
-                  key={item}
-                  onClick={() => setFormat(item)}
-                  style={{
-                    background: format === item ? "white" : "#222",
-                    color: format === item ? "black" : "white",
-                    border: "1px solid #444",
-                    padding: "10px 14px",
-                    borderRadius: "12px",
-                    cursor: "pointer"
-                  }}
+                <p style={{ color: "#aaa" }}>{selectedProduct.vibe}</p>
+
+                <a
+                  href={selectedProduct.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "#fff" }}
                 >
-                  {item}
-                </button>
-              )
+                  Åpne produkt
+                </a>
+              </>
             )}
-          </div>
+          </section>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              flexWrap: "wrap",
-              marginTop: "20px"
-            }}
-          >
-            <button onClick={() => generateCaption(selectedProduct)}>
-              Generer caption
-            </button>
+          <section style={styles.card}>
+            <label style={styles.label}>Format</label>
 
-            <button onClick={() => generateHook(selectedProduct)}>
-              Generer hook
-            </button>
+            <div style={styles.formatRow}>
+              {["Instagram Post", "Instagram Story", "TikTok", "YouTube Thumbnail"].map(
+                (item) => (
+                  <button
+                    key={item}
+                    onClick={() => setFormat(item)}
+                    style={format === item ? styles.button : styles.darkButton}
+                  >
+                    {item}
+                  </button>
+                )
+              )}
+            </div>
 
-            <button onClick={copyCaption}>Kopier caption</button>
+            <label style={styles.label}>Hook</label>
 
-            <button onClick={generatePromoImage}>Generer promo-bilde</button>
-
-            <button onClick={downloadPromoImage}>Last ned bilde</button>
-          </div>
-
-          <textarea
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            style={{
-              width: "100%",
-              minHeight: "180px",
-              marginTop: "20px",
-              background: "#222",
-              color: "white",
-              border: "1px solid #444",
-              borderRadius: "12px",
-              padding: "14px",
-              fontSize: "16px"
-            }}
-          />
-
-          <canvas
-            ref={canvasRef}
-            style={{
-              width: "100%",
-              maxWidth: "500px",
-              marginTop: "30px",
-              borderRadius: "18px",
-              background: "#222"
-            }}
-          />
-
-          <a
-            href={selectedProduct.url}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              color: "white",
-              display: "block",
-              marginTop: "20px"
-            }}
-          >
-            Åpne produkt
-          </a>
-        </div>
-      )}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "20px"
-        }}
-      >
-        {products.map((product, index) => (
-          <div
-            key={`${product.name}-${index}`}
-            onClick={() => setSelectedProduct(product)}
-            style={{
-              background:
-                selectedProduct?.imageUrl === product.imageUrl
-                  ? "#2b2b2b"
-                  : "#1c1c1c",
-              border:
-                selectedProduct?.imageUrl === product.imageUrl
-                  ? "2px solid white"
-                  : "1px solid #333",
-              borderRadius: "18px",
-              padding: "16px",
-              cursor: "pointer"
-            }}
-          >
-            <img
-              src={product.imageUrl}
-              alt={product.name}
+            <input
+              value={hook}
+              onChange={(e) => setHook(e.target.value)}
               style={{
-                width: "100%",
-                aspectRatio: "1 / 1",
-                objectFit: "cover",
-                borderRadius: "14px",
-                background: "#333"
+                ...styles.select,
+                marginBottom: "0"
               }}
             />
 
-            <h2 style={{ fontSize: "18px" }}>{product.name}</h2>
+            <div style={styles.buttons}>
+              <button
+                style={styles.button}
+                onClick={() => generateCaption(selectedProduct)}
+              >
+                Generer caption
+              </button>
 
-            <p style={{ color: "#aaa" }}>{product.vibe}</p>
-          </div>
-        ))}
+              <button
+                style={styles.darkButton}
+                onClick={() => generateHook(selectedProduct)}
+              >
+                Generer hook
+              </button>
+
+              <button style={styles.darkButton} onClick={copyCaption}>
+                Kopier caption
+              </button>
+
+              <button style={styles.button} onClick={generatePromoImage}>
+                Generer promo-bilde
+              </button>
+
+              <button style={styles.darkButton} onClick={downloadPromoImage}>
+                Last ned bilde
+              </button>
+            </div>
+
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Caption vises her..."
+              style={styles.textarea}
+            />
+
+            <canvas ref={canvasRef} style={styles.canvas} />
+          </section>
+        </main>
       </div>
     </div>
   );
