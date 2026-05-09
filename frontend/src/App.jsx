@@ -37,6 +37,9 @@ function App() {
       "same streetwear 🔥",
       "bygdefæst energi.",
       "for dæ som skjønne viben.",
+      "snap this fit 😭",
+      "ny merch. samme kaos.",
+      "denne e farlig clean.",
       `${product.name} ute nu 👀`
     ];
 
@@ -65,21 +68,21 @@ function App() {
       {
         time: "12:00",
         type: "music",
-        format: "Instagram Story",
-        platform: "Instagram + Facebook",
-        hook: "music merch for dæ som skjønne viben."
+        format: "Snapchat Story",
+        platform: "Snapchat",
+        hook: "snap this fit 😭🔥"
       },
       {
         time: "16:00",
         type: "humor",
         format: "TikTok",
-        platform: "Instagram + Facebook",
+        platform: "TikTok",
         hook: "bygdefæst energi."
       },
       {
         time: "20:00",
         type: "music",
-        format: "Instagram Post",
+        format: "Instagram Story",
         platform: "Instagram + Facebook",
         hook: "kveldens merch drop."
       }
@@ -139,7 +142,11 @@ function App() {
   }
 
   function getCanvasSize() {
-    if (format === "TikTok" || format === "Instagram Story") {
+    if (
+      format === "TikTok" ||
+      format === "Instagram Story" ||
+      format === "Snapchat Story"
+    ) {
       return { width: 1080, height: 1920 };
     }
 
@@ -150,25 +157,36 @@ function App() {
     return { width: 1080, height: 1080 };
   }
 
-  function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  function getWrappedLines(ctx, text, maxWidth) {
     const words = text.split(" ");
+    const lines = [];
     let line = "";
-    let currentY = y;
 
     words.forEach((word) => {
       const testLine = line + word + " ";
       const metrics = ctx.measureText(testLine);
 
       if (metrics.width > maxWidth && line !== "") {
-        ctx.fillText(line, x, currentY);
+        lines.push(line.trim());
         line = word + " ";
-        currentY += lineHeight;
       } else {
         line = testLine;
       }
     });
 
-    ctx.fillText(line, x, currentY);
+    lines.push(line.trim());
+    return lines;
+  }
+
+  function drawCenteredWrappedText(ctx, text, x, centerY, maxWidth, lineHeight) {
+    const lines = getWrappedLines(ctx, text, maxWidth);
+    const totalHeight = lines.length * lineHeight;
+    let y = centerY - totalHeight / 2 + lineHeight * 0.8;
+
+    lines.forEach((line) => {
+      ctx.fillText(line, x, y);
+      y += lineHeight;
+    });
   }
 
   function generatePromoImage() {
@@ -208,29 +226,52 @@ function App() {
 
       ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
 
-      const overlayHeight = Math.round(size.height * 0.22);
+      const isVertical =
+        format === "TikTok" ||
+        format === "Instagram Story" ||
+        format === "Snapchat Story";
 
-      ctx.fillStyle = "rgba(0,0,0,0.75)";
-      ctx.fillRect(0, size.height - overlayHeight, size.width, overlayHeight);
+      const overlayHeight = isVertical
+        ? Math.round(size.height * 0.2)
+        : Math.round(size.height * 0.24);
+
+      const overlayY = isVertical
+        ? Math.round(size.height * 0.68)
+        : size.height - overlayHeight;
+
+      ctx.fillStyle = "rgba(0,0,0,0.72)";
+      ctx.fillRect(0, overlayY, size.width, overlayHeight);
 
       ctx.fillStyle = "white";
-      ctx.font = `bold ${Math.round(size.width * 0.065)}px Arial`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
 
-      wrapText(
+      const fontSize = isVertical
+        ? Math.round(size.width * 0.085)
+        : Math.round(size.width * 0.06);
+
+      const lineHeight = Math.round(fontSize * 1.18);
+
+      ctx.font = `bold ${fontSize}px Arial`;
+
+      drawCenteredWrappedText(
         ctx,
         hook,
-        Math.round(size.width * 0.06),
-        size.height - overlayHeight + 45,
-        Math.round(size.width * 0.88),
-        Math.round(size.width * 0.08)
+        size.width / 2,
+        overlayY + overlayHeight / 2 - 18,
+        Math.round(size.width * 0.82),
+        lineHeight
       );
 
-      ctx.font = `${Math.round(size.width * 0.032)}px Arial`;
+      ctx.font = `${Math.round(size.width * 0.033)}px Arial`;
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
       ctx.fillText(
         "slincraze.myspreadshop.no",
-        Math.round(size.width * 0.06),
-        size.height - 55
+        size.width / 2,
+        overlayY + overlayHeight - 32
       );
+
+      ctx.textAlign = "left";
 
       setStatus("Promo-bilde generert");
     };
@@ -503,17 +544,21 @@ function App() {
             <label style={styles.label}>Format</label>
 
             <div style={styles.formatRow}>
-              {["Instagram Post", "Instagram Story", "TikTok", "YouTube Thumbnail"].map(
-                (item) => (
-                  <button
-                    key={item}
-                    onClick={() => setFormat(item)}
-                    style={format === item ? styles.button : styles.darkButton}
-                  >
-                    {item}
-                  </button>
-                )
-              )}
+              {[
+                "Instagram Post",
+                "Instagram Story",
+                "Snapchat Story",
+                "TikTok",
+                "YouTube Thumbnail"
+              ].map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setFormat(item)}
+                  style={format === item ? styles.button : styles.darkButton}
+                >
+                  {item}
+                </button>
+              ))}
             </div>
 
             <label style={styles.label}>Hook</label>
