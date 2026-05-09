@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { generateCaption } from "./utils/captionGenerator";
 
 const BACKEND_URL = "https://slincrazemerch.onrender.com";
 
@@ -380,12 +381,11 @@ function App() {
             />
 
             <div style={styles.buttons}>
-              <button
-                style={styles.button}
-                onClick={() => setCaption(generateCaption("humor"))}
-              >
-                Generer caption
-              </button>
+<button
+  onClick={() => setCaption(generateCaption("humor"))}
+>
+  Generer caption
+</button>
 
               <button
                 style={styles.darkButton}
