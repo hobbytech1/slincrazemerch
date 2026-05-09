@@ -413,9 +413,6 @@ function App() {
 
         <section style={{ ...styles.card, marginBottom: "24px" }}>
           <h2 style={{ marginTop: 0 }}>Dagens publiseringsplan</h2>
-          <p style={{ color: "#aaa" }}>
-            Lager 4 innlegg for Instagram og Facebook: 09:00, 12:00, 16:00 og 20:00.
-          </p>
 
           <div style={styles.buttons}>
             <button style={styles.button} onClick={generateDailyPlan}>
@@ -431,12 +428,14 @@ function App() {
             <div style={styles.planGrid}>
               {dailyPlan.map((post) => (
                 <div key={post.id} style={styles.planCard}>
-                  <h3 style={{ margin: "0 0 8px" }}>{post.time}</h3>
-                  <p style={{ color: "#aaa", margin: "0 0 8px" }}>
-                    {post.platform}
-                  </p>
+                  <h3>{post.time}</h3>
+
+                  <p>{post.platform}</p>
+
                   <strong>{post.productName}</strong>
-                  <p style={{ color: "#aaa" }}>{post.format}</p>
+
+                  <p>{post.format}</p>
+
                   <p>Status: {post.status}</p>
 
                   <div style={styles.buttons}>
@@ -445,6 +444,25 @@ function App() {
                       onClick={() => usePlannedPost(post)}
                     >
                       Bruk
+                    </button>
+
+                    <button
+                      style={styles.button}
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(post.caption);
+
+                        if (post.platform.includes("Instagram")) {
+                          window.open("https://www.instagram.com/", "_blank");
+                        }
+
+                        if (post.platform.includes("Facebook")) {
+                          window.open("https://www.facebook.com/", "_blank");
+                        }
+
+                        setStatus(`Caption kopiert + åpnet ${post.platform}`);
+                      }}
+                    >
+                      Post nå
                     </button>
 
                     <button
