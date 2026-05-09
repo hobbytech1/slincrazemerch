@@ -20,6 +20,7 @@ function App() {
       setStatus("Henter produkter...");
       const response = await fetch(`${BACKEND_URL}/api/products`);
       const data = await response.json();
+
       setProducts(data);
       setSelectedIndex(0);
       setStatus(`Fant ${data.length} produkter`);
@@ -109,6 +110,7 @@ function App() {
   function usePlannedPost(post) {
     setCaption(post.caption);
     setHook(post.hook);
+    setFormat(post.format);
 
     const productIndex = products.findIndex(
       (product) => product.name === post.productName
@@ -118,7 +120,6 @@ function App() {
       setSelectedIndex(productIndex);
     }
 
-    setFormat(post.format);
     setStatus(`Valgte planlagt innlegg kl ${post.time}`);
   }
 
@@ -266,6 +267,7 @@ function App() {
     loadProducts();
 
     const savedPlan = localStorage.getItem("slincrazeDailyPlan");
+
     if (savedPlan) {
       setDailyPlan(JSON.parse(savedPlan));
     }
@@ -429,13 +431,9 @@ function App() {
               {dailyPlan.map((post) => (
                 <div key={post.id} style={styles.planCard}>
                   <h3>{post.time}</h3>
-
                   <p>{post.platform}</p>
-
                   <strong>{post.productName}</strong>
-
                   <p>{post.format}</p>
-
                   <p>Status: {post.status}</p>
 
                   <div style={styles.buttons}>
@@ -445,26 +443,6 @@ function App() {
                     >
                       Bruk
                     </button>
-
-<button
-  style={styles.button}
-  onClick={async () => {
-    usePlannedPost(post);
-
-    await navigator.clipboard.writeText(post.caption);
-
-    if (post.imageUrl) {
-      window.open(post.imageUrl, "_blank");
-    }
-
-    window.open("https://www.instagram.com/", "_blank");
-    window.open("https://www.facebook.com/", "_blank");
-
-    setStatus("Caption kopiert + bilde åpnet. Klar til manuell posting.");
-  }}
->
-  Klargjør post
-</button>
 
                     <button
                       style={styles.darkButton}
