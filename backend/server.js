@@ -2,16 +2,12 @@ import express from "express";
 import cors from "cors";
 import axios from "axios";
 import * as cheerio from "cheerio";
+import puppeteer from "puppeteer";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 const SHOP_URL = "https://slincraze.myspreadshop.no/all";
-
-const SHOP_PAGES = [
-  "https://slincraze.myspreadshop.no/all",
-  "https://slincraze.myspreadshop.no"
-];
 
 app.use(cors());
 
@@ -19,8 +15,84 @@ app.get("/", (req, res) => {
   res.send("SlinCraze backend running. Go to /api/products");
 });
 
-async function scrapePage(pageUrl) {
-  const response = await axios.get(pageUrl, {
+async function scrapeWithPuppeteer() {
+  let browser;
+
+  try {
+    browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
+
+    const page = await browser.newPage();
+
+    await page.setUserAgent(
+      "Mozilla/5.0 SlinCrazeMerchBot/1.0"
+    );
+
+    await page.goto(SHOP_URL, {
+      waitUntil: "networkidle2",
+      timeout: 60000
+    });
+
+    // Scroll ned flere ganger for lazy-loaded produkter
+    for (let i = 0; i < 6; i++) {
+      await page.evaluate(() => {
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+
+    const products = await page.evaluate(() => {
+      const items = [];
+      const images = document.querySelectorAll("img");
+
+      images.forEach((img) => {
+        const src =
+          img.src ||
+          img.getAttribute("data-src") ||
+          img.getAttribute("data-original");
+
+        const alt = img.alt;
+
+        if (!src || !alt) return;
+        if (alt.length < 3) return;
+
+        const lowerAlt = alt.toLowerCase();
+
+        if (
+          !lowerAlt.includes("jatta") &&
+          !lowerAlt.includes("slincraze") &&
+          !lowerAlt.includes("t-skjorte") &&
+          !lowerAlt.includes("hoodie") &&
+          !lowerAlt.includes("premium") &&
+          !lowerAlt.includes("økologisk")
+        ) {
+          return;
+        }
+
+        items.push({
+          name: alt.trim(),
+          imageUrl: src,
+          url: "https://slincraze.myspreadshop.no/all",
+          vibe: "SlinCraze merch"
+        });
+      });
+
+      return items;
+    });
+
+    return products;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
+async function scrapeWithCheerioFallback() {
+  const response = await axios.get(SHOP_URL, {
     headers: {
       "User-Agent": "Mozilla/5.0 SlinCrazeMerchBot/1.0"
     },
@@ -41,22 +113,11 @@ async function scrapePage(pageUrl) {
     if (!src || !alt) return;
     if (alt.length < 3) return;
 
-    const lowerAlt = alt.toLowerCase();
-
-    if (
-      !lowerAlt.includes("jatta") &&
-      !lowerAlt.includes("slincraze") &&
-      !lowerAlt.includes("t-skjorte") &&
-      !lowerAlt.includes("hoodie")
-    ) {
-      return;
-    }
-
     const imageUrl = src.startsWith("http")
       ? src
       : src.startsWith("//")
         ? `https:${src}`
-        : new URL(src, pageUrl).href;
+        : new URL(src, SHOP_URL).href;
 
     products.push({
       name: alt.trim(),
@@ -71,20 +132,21 @@ async function scrapePage(pageUrl) {
 
 app.get("/api/products", async (req, res) => {
   try {
-    const results = await Promise.allSettled(
-      SHOP_PAGES.map((pageUrl) => scrapePage(pageUrl))
-    );
+    let products = [];
 
-    const products = results
-      .filter((result) => result.status === "fulfilled")
-      .flatMap((result) => result.value);
+    try {
+      products = await scrapeWithPuppeteer();
+    } catch (error) {
+      console.error("Puppeteer failed, using fallback:", error.message);
+      products = await scrapeWithCheerioFallback();
+    }
 
     const uniqueProducts = products.filter(
       (product, index, array) =>
         index === array.findIndex((p) => p.imageUrl === product.imageUrl)
     );
 
-    res.json(uniqueProducts.slice(0, 50));
+    res.json(uniqueProducts.slice(0, 100));
   } catch (error) {
     console.error("Product fetch failed:", error.message);
 
@@ -106,7 +168,8 @@ app.get("/api/image-proxy", async (req, res) => {
       responseType: "arraybuffer",
       headers: {
         "User-Agent": "Mozilla/5.0 SlinCrazeMerchBot/1.0"
-      }
+      },
+      timeout: 30000
     });
 
     res.setHeader(
