@@ -446,24 +446,25 @@ function App() {
                       Bruk
                     </button>
 
-                    <button
-                      style={styles.button}
-                      onClick={async () => {
-                        await navigator.clipboard.writeText(post.caption);
+<button
+  style={styles.button}
+  onClick={async () => {
+    usePlannedPost(post);
 
-                        if (post.platform.includes("Instagram")) {
-                          window.open("https://www.instagram.com/", "_blank");
-                        }
+    await navigator.clipboard.writeText(post.caption);
 
-                        if (post.platform.includes("Facebook")) {
-                          window.open("https://www.facebook.com/", "_blank");
-                        }
+    if (post.imageUrl) {
+      window.open(post.imageUrl, "_blank");
+    }
 
-                        setStatus(`Caption kopiert + åpnet ${post.platform}`);
-                      }}
-                    >
-                      Post nå
-                    </button>
+    window.open("https://www.instagram.com/", "_blank");
+    window.open("https://www.facebook.com/", "_blank");
+
+    setStatus("Caption kopiert + bilde åpnet. Klar til manuell posting.");
+  }}
+>
+  Klargjør post
+</button>
 
                     <button
                       style={styles.darkButton}
