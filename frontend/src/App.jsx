@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const BACKEND_URL = "http://localhost:3001";
+const BACKEND_URL = "https://slincrazemerch.onrender.com";
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -27,7 +27,7 @@ function App() {
 
       setStatus(`Fant ${data.length} produkter`);
     } catch (error) {
-      setStatus("Kunne ikke hente produkter");
+      setStatus("Kunne ikke hente produkter fra backend");
     }
   }
 
