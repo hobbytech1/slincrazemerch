@@ -248,16 +248,16 @@ function App() {
     const actualVariation =
       imageVariation === "Auto" ? pickRandomVariation() : imageVariation;
 
-    const settings = {
-      variation: actualVariation,
-      zoom: 1,
-      offsetX: 0,
-      offsetY: 0,
-      rotation: 0,
-      blurBackground: false,
-      darken: 0.15,
-      vignette: true
-    };
+const settings = {
+  variation: actualVariation,
+  zoom: 1,
+  offsetX: 0,
+  offsetY: 0,
+  rotation: 0,
+  blurBackground: false,
+  darken: designStyle === "Original" ? 0 : 0.15,
+  vignette: designStyle === "Original" ? false : true
+};
 
     if (actualVariation === "Zoom") {
       settings.zoom = 1.22;
@@ -286,6 +286,7 @@ function App() {
       settings.darken = 0.35;
     }
 
+    if (designStyle === "Original") {
     return settings;
   }
 
