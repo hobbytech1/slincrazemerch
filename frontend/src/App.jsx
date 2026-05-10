@@ -10,7 +10,7 @@ function App() {
   const [caption, setCaption] = useState("");
   const [hook, setHook] = useState("jatta jatta. ny drop.");
   const [format, setFormat] = useState("Instagram Post");
-  const [designStyle, setDesignStyle] = useState("Dark");
+  const [designStyle, setDesignStyle] = useState("Original");
   const [imageVariation, setImageVariation] = useState("Auto");
   const [dailyPlan, setDailyPlan] = useState([]);
   const canvasRef = useRef(null);
@@ -111,7 +111,7 @@ function App() {
         format: "Instagram Post",
         platform: "Instagram + Facebook",
         hook: "jatta jatta. dagens første drop.",
-        designStyle: "Dark",
+        designStyle: "Original",
         imageVariation: "Center"
       },
       {
@@ -171,7 +171,7 @@ function App() {
     setCaption(post.caption);
     setHook(post.hook);
     setFormat(post.format);
-    setDesignStyle(post.designStyle || "Dark");
+    setDesignStyle(post.designStyle || "Original");
     setImageVariation(post.imageVariation || "Auto");
 
     const productIndex = products.findIndex(
@@ -207,10 +207,6 @@ function App() {
       format === "Snapchat Story"
     ) {
       return { width: 1080, height: 1920 };
-    }
-
-    if (format === "YouTube Thumbnail") {
-      return { width: 1280, height: 720 };
     }
 
     return { width: 1080, height: 1080 };
@@ -355,6 +351,29 @@ function App() {
     }
 
     return settings.variation;
+  }
+
+  function drawOriginalStyle(ctx, size, isVertical) {
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(0, 0, size.width, size.height);
+
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+
+    const fontSize = isVertical
+      ? Math.round(size.width * 0.075)
+      : Math.round(size.width * 0.055);
+
+    ctx.font = `bold ${fontSize}px Arial`;
+
+    drawCenteredWrappedText(
+      ctx,
+      hook,
+      size.width / 2,
+      size.height - Math.round(size.height * 0.12),
+      Math.round(size.width * 0.82),
+      Math.round(fontSize * 1.15)
+    );
   }
 
   function drawStickers(ctx, size) {
@@ -609,6 +628,7 @@ function App() {
         format === "Instagram Story" ||
         format === "Snapchat Story";
 
+      if (designStyle === "Original") drawOriginalStyle(ctx, size, isVertical);
       if (designStyle === "Dark") drawDarkStyle(ctx, size, isVertical);
       if (designStyle === "Cinematic") drawCinematicStyle(ctx, size, isVertical);
       if (designStyle === "Minimal") drawMinimalStyle(ctx, size);
@@ -642,11 +662,6 @@ function App() {
       .replaceAll(" ", "-")}-${format.toLowerCase().replaceAll(" ", "-")}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
-  }
-
-  async function copyCaption() {
-    await navigator.clipboard.writeText(caption);
-    alert("Caption kopiert");
   }
 
   useEffect(() => {
@@ -857,7 +872,7 @@ function App() {
                   <p style={styles.muted}>{post.platform}</p>
                   <strong>{post.productName}</strong>
                   <p style={styles.muted}>{post.format}</p>
-                  <p>Design: {post.designStyle || "Dark"}</p>
+                  <p>Design: {post.designStyle || "Original"}</p>
                   <p>Variation: {post.imageVariation || "Auto"}</p>
                   <p>Status: {post.status}</p>
 
@@ -936,8 +951,7 @@ function App() {
                 "Instagram Post",
                 "Instagram Story",
                 "Snapchat Story",
-                "TikTok",
-                "YouTube Thumbnail"
+                "TikTok"
               ].map((item) => (
                 <button
                   key={item}
@@ -952,7 +966,7 @@ function App() {
             <label style={styles.label}>Designstil</label>
 
             <div style={styles.formatRow}>
-              {["Dark", "Cinematic", "Minimal", "Chaos", "Magazine"].map(
+              {["Original", "Dark", "Cinematic", "Minimal", "Chaos", "Magazine"].map(
                 (item) => (
                   <button
                     key={item}
@@ -1009,10 +1023,6 @@ function App() {
                 onClick={() => generateHook(selectedProduct)}
               >
                 Generer hook
-              </button>
-
-              <button style={styles.darkButton} onClick={copyCaption}>
-                Kopier caption
               </button>
 
               <button style={styles.button} onClick={generatePromoImage}>
