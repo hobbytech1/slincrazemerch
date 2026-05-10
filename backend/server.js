@@ -66,7 +66,6 @@ app.get("/api/image-proxy", async (req, res) => {
 });
 
 import cron from "node-cron";
-import fs from "fs";
 
 const FACEBOOK_PAGE_ID = process.env.FACEBOOK_PAGE_ID;
 const FACEBOOK_PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
