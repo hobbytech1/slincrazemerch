@@ -72,8 +72,6 @@ app.get("/api/image-proxy", async (req, res) => {
   }
 });
 
-Bytt endpointen i server.js med denne debug-versjonen:
-
 app.get("/api/slincraze/random-image", async (req, res) => {
   try {
     if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
