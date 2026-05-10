@@ -244,51 +244,54 @@ function App() {
     });
   }
 
-  function getVariationSettings() {
-    const actualVariation =
-      imageVariation === "Auto" ? pickRandomVariation() : imageVariation;
+ function getVariationSettings() {
+  const actualVariation =
+    imageVariation === "Auto" ? pickRandomVariation() : imageVariation;
 
-const settings = {
-  variation: actualVariation,
-  zoom: 1,
-  offsetX: 0,
-  offsetY: 0,
-  rotation: 0,
-  blurBackground: false,
-  darken: designStyle === "Original" ? 0 : 0.15,
-  vignette: designStyle === "Original" ? false : true
-};
+  const settings = {
+    variation: actualVariation,
+    zoom: 1,
+    offsetX: 0,
+    offsetY: 0,
+    rotation: 0,
+    blurBackground: false,
+    darken: designStyle === "Original" ? 0 : 0.15,
+    vignette: designStyle === "Original" ? false : true
+  };
 
-    if (actualVariation === "Zoom") {
-      settings.zoom = 1.22;
-      settings.darken = 0.28;
-    }
-
-    if (actualVariation === "Left") {
-      settings.zoom = 1.1;
-      settings.offsetX = -0.18;
-    }
-
-    if (actualVariation === "Right") {
-      settings.zoom = 1.1;
-      settings.offsetX = 0.18;
-    }
-
-    if (actualVariation === "Top") {
-      settings.zoom = 1.12;
-      settings.offsetY = -0.16;
-    }
-
-    if (actualVariation === "Chaos") {
-      settings.zoom = 1.18;
-      settings.rotation = Math.random() > 0.5 ? 0.035 : -0.035;
-      settings.blurBackground = true;
-      settings.darken = 0.35;
-    }
-
-    if (designStyle === "Original") {
+  if (designStyle === "Original") {
     return settings;
   }
+
+  if (actualVariation === "Zoom") {
+    settings.zoom = 1.22;
+    settings.darken = 0.28;
+  }
+
+  if (actualVariation === "Left") {
+    settings.zoom = 1.1;
+    settings.offsetX = -0.18;
+  }
+
+  if (actualVariation === "Right") {
+    settings.zoom = 1.1;
+    settings.offsetX = 0.18;
+  }
+
+  if (actualVariation === "Top") {
+    settings.zoom = 1.12;
+    settings.offsetY = -0.16;
+  }
+
+  if (actualVariation === "Chaos") {
+    settings.zoom = 1.18;
+    settings.rotation = Math.random() > 0.5 ? 0.035 : -0.035;
+    settings.blurBackground = true;
+    settings.darken = 0.35;
+  }
+
+  return settings;
+}
 
   function drawImageCover(ctx, image, size, settings) {
     const imageRatio = image.width / image.height;
