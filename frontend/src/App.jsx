@@ -357,28 +357,35 @@ function App() {
     return settings.variation;
   }
 
-  function drawOriginalStyle(ctx, size, isVertical) {
-    ctx.fillStyle = "rgba(0,0,0,0.18)";
-    ctx.fillRect(0, 0, size.width, size.height);
+function drawOriginalStyle(ctx, size, isVertical) {
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
 
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
+  const fontSize = isVertical
+    ? Math.round(size.width * 0.075)
+    : Math.round(size.width * 0.055);
 
-    const fontSize = isVertical
-      ? Math.round(size.width * 0.075)
-      : Math.round(size.width * 0.055);
+  ctx.font = `bold ${fontSize}px Arial`;
 
-    ctx.font = `bold ${fontSize}px Arial`;
+  ctx.shadowColor = "rgba(0,0,0,0.75)";
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 4;
 
-    drawCenteredWrappedText(
-      ctx,
-      hook,
-      size.width / 2,
-      size.height - Math.round(size.height * 0.12),
-      Math.round(size.width * 0.82),
-      Math.round(fontSize * 1.15)
-    );
-  }
+  drawCenteredWrappedText(
+    ctx,
+    hook,
+    size.width / 2,
+    size.height - Math.round(size.height * 0.12),
+    Math.round(size.width * 0.82),
+    Math.round(fontSize * 1.15)
+  );
+
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+}
 
   function drawStickers(ctx, size) {
     const stickers = ["NEW", "DROP", "😭🔥", "JATTA", "LIMITED", "FIT CHECK"];
