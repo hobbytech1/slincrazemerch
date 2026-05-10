@@ -10,9 +10,6 @@ const PORT = process.env.PORT || 3001;
 
 const FACEBOOK_PAGE_ID = process.env.FACEBOOK_PAGE_ID;
 const FACEBOOK_PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
-const GOOGLE_SEARCH_API_KEY = process.env.GOOGLE_SEARCH_API_KEY;
-const GOOGLE_SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID;
-
 const GRAPH_VERSION = "v20.0";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -69,56 +66,6 @@ app.get("/api/image-proxy", async (req, res) => {
   } catch (error) {
     console.error("Image proxy failed:", error.message);
     res.status(500).send("Could not proxy image");
-  }
-});
-
-app.get("/api/slincraze/random-image", async (req, res) => {
-  try {
-    if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
-      return res.status(500).json({
-        error: "Missing GOOGLE_SEARCH_API_KEY or GOOGLE_SEARCH_ENGINE_ID"
-      });
-    }
-
-    const response = await axios.get(
-      "https://www.googleapis.com/customsearch/v1",
-      {
-        params: {
-          key: GOOGLE_SEARCH_API_KEY,
-          cx: GOOGLE_SEARCH_ENGINE_ID,
-          q: "SlinCraze",
-          searchType: "image",
-          num: 10,
-          safe: "active"
-        },
-        timeout: 30000
-      }
-    );
-
-    const images = response.data.items || [];
-
-    if (images.length === 0) {
-      return res.status(404).json({
-        error: "No SlinCraze images found",
-        googleResponse: response.data
-      });
-    }
-
-    const randomImage = images[Math.floor(Math.random() * images.length)];
-
-    res.json({
-      title: randomImage.title,
-      imageUrl: randomImage.link,
-      thumbnail: randomImage.image?.thumbnailLink,
-      sourceUrl: randomImage.image?.contextLink
-    });
-  } catch (error) {
-    console.error("Random SlinCraze image failed:", error.response?.data || error.message);
-
-    res.status(500).json({
-      error: "Could not fetch random SlinCraze image",
-      details: error.response?.data || error.message
-    });
   }
 });
 

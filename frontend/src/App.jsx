@@ -14,27 +14,9 @@ function App() {
   const [imageVariation, setImageVariation] = useState("Auto");
   const [dailyPlan, setDailyPlan] = useState([]);
   const [mockups, setMockups] = useState([]);
-  const [webImage, setWebImage] = useState(null);
-  const [useWebImage, setUseWebImage] = useState(false);
   const canvasRef = useRef(null);
 
   const selectedProduct = products[selectedIndex];
-
-  function getActiveImageUrl() {
-    if (useWebImage && webImage?.imageUrl) {
-      return webImage.imageUrl;
-    }
-
-    return selectedProduct?.imageUrl || "";
-  }
-
-  function getActiveName() {
-    if (useWebImage && webImage?.title) {
-      return webImage.title;
-    }
-
-    return selectedProduct?.name || "SlinCraze";
-  }
 
   async function loadProducts() {
     try {
@@ -50,36 +32,9 @@ function App() {
     }
   }
 
-  async function findRandomSlinCrazeImage() {
-    try {
-      setStatus("Henter random SlinCraze-bilde...");
-
-      const response = await fetch(`${BACKEND_URL}/api/slincraze/random-image`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Kunne ikke hente bilde");
-      }
-
-      setWebImage(data);
-      setUseWebImage(true);
-      setHook("SlinCraze moment 🔥");
-      setCaption(
-        `SlinCraze moment 🔥\n\n${data.title}\n\n#slincraze #sapmi #sami #hiphop`
-      );
-      setStatus("Random SlinCraze-bilde hentet");
-    } catch (error) {
-      console.error(error);
-      setStatus("Kunne ikke hente random SlinCraze-bilde");
-      alert(error.message);
-    }
-  }
-
   async function publishToFacebookNow() {
-    const imageUrl = getActiveImageUrl();
-
-    if (!imageUrl) {
-      alert("Velg et produkt eller hent et bilde først");
+    if (!selectedProduct) {
+      alert("Velg et produkt først");
       return;
     }
 
@@ -98,8 +53,8 @@ function App() {
         },
         body: JSON.stringify({
           caption,
-          imageUrl,
-          productName: getActiveName()
+          imageUrl: selectedProduct.imageUrl,
+          productName: selectedProduct.name
         })
       });
 
@@ -118,7 +73,7 @@ function App() {
   }
 
   function generateHook(product) {
-    if (!product && !useWebImage) return;
+    if (!product) return;
 
     const hooks = [
       "jatta jatta. ny drop.",
@@ -128,8 +83,7 @@ function App() {
       "snap this fit 😭",
       "ny merch. samme kaos.",
       "denne e farlig clean.",
-      "SlinCraze moment 🔥",
-      `${getActiveName()} ute nu 👀`
+      `${product.name} ute nu 👀`
     ];
 
     setHook(hooks[Math.floor(Math.random() * hooks.length)]);
@@ -215,7 +169,6 @@ function App() {
   }
 
   function usePlannedPost(post) {
-    setUseWebImage(false);
     setCaption(post.caption);
     setHook(post.hook);
     setFormat(post.format);
@@ -681,7 +634,7 @@ function App() {
 
   async function renderPromoToCanvas({
     canvas,
-    imageUrl,
+    product,
     customFormat = format,
     customStyle = designStyle,
     customVariation = imageVariation,
@@ -697,7 +650,7 @@ function App() {
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, size.width, size.height);
 
-    const image = await loadImage(imageUrl);
+    const image = await loadImage(product.imageUrl);
     const usedVariation = drawImageCover(ctx, image, size, settings);
 
     const isVertical =
@@ -715,14 +668,12 @@ function App() {
   }
 
   async function generatePromoImage() {
-    const imageUrl = getActiveImageUrl();
-
-    if (!imageUrl) return;
+    if (!selectedProduct) return;
 
     try {
       const result = await renderPromoToCanvas({
         canvas: canvasRef.current,
-        imageUrl
+        product: selectedProduct
       });
 
       setStatus(`Promo-bilde generert: ${designStyle} / ${result.usedVariation}`);
@@ -732,10 +683,8 @@ function App() {
   }
 
   async function generateMockups() {
-    const imageUrl = getActiveImageUrl();
-
-    if (!imageUrl) {
-      alert("Velg et produkt eller hent et bilde først");
+    if (!selectedProduct) {
+      alert("Velg et produkt først");
       return;
     }
 
@@ -748,7 +697,7 @@ function App() {
           style: "Original",
           variation: "Center",
           format: "Instagram Post",
-          hook: hook || `${getActiveName()} ute nu 👀`
+          hook: hook || `${selectedProduct.name} ute nu 👀`
         },
         {
           name: "Dark Drop Poster",
@@ -762,7 +711,7 @@ function App() {
           style: "Magazine",
           variation: "Top",
           format: "Instagram Story",
-          hook: "SlinCraze moment"
+          hook: "SlinCraze merch drop"
         },
         {
           name: "Chaos Story",
@@ -780,7 +729,7 @@ function App() {
 
         const result = await renderPromoToCanvas({
           canvas: offscreenCanvas,
-          imageUrl,
+          product: selectedProduct,
           customFormat: template.format,
           customStyle: template.style,
           customVariation: template.variation,
@@ -1083,17 +1032,14 @@ function App() {
 
         <main style={styles.grid}>
           <section style={styles.card}>
-            <h2 style={styles.sectionTitle}>Produkt / bilde</h2>
+            <h2 style={styles.sectionTitle}>Produkt</h2>
 
             <label style={styles.label}>Produktvalg</label>
 
             <select
               style={styles.select}
               value={selectedIndex}
-              onChange={(e) => {
-                setSelectedIndex(Number(e.target.value));
-                setUseWebImage(false);
-              }}
+              onChange={(e) => setSelectedIndex(Number(e.target.value))}
             >
               {products.map((product, index) => (
                 <option key={index} value={index}>
@@ -1102,7 +1048,7 @@ function App() {
               ))}
             </select>
 
-            {selectedProduct && !useWebImage && (
+            {selectedProduct && (
               <>
                 <img
                   src={selectedProduct.imageUrl}
@@ -1126,49 +1072,6 @@ function App() {
                 </a>
               </>
             )}
-
-            {webImage && useWebImage && (
-              <>
-                <img
-                  src={webImage.thumbnail || webImage.imageUrl}
-                  alt={webImage.title}
-                  style={styles.image}
-                />
-
-                <h2 style={{ color: "#fff", marginBottom: "8px" }}>
-                  Random SlinCraze-bilde
-                </h2>
-
-                <p style={styles.muted}>{webImage.title}</p>
-
-                <a
-                  href={webImage.sourceUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: "#fff", fontWeight: "700" }}
-                >
-                  Åpne kilde
-                </a>
-              </>
-            )}
-
-            <div style={styles.buttons}>
-              <button
-                style={styles.darkButton}
-                onClick={findRandomSlinCrazeImage}
-              >
-                Finn random SlinCraze-bilde
-              </button>
-
-              {webImage && (
-                <button
-                  style={styles.button}
-                  onClick={() => setUseWebImage(!useWebImage)}
-                >
-                  {useWebImage ? "Bruk produktbilde" : "Bruk random bilde"}
-                </button>
-              )}
-            </div>
           </section>
 
           <section style={styles.card}>
@@ -1285,7 +1188,7 @@ function App() {
               <div style={{ marginTop: "28px" }}>
                 <h2 style={styles.sectionTitle}>Auto-generated mockups</h2>
                 <p style={styles.muted}>
-                  Fire ferdige varianter basert på valgt bilde.
+                  Fire ferdige varianter basert på valgt produkt.
                 </p>
 
                 <div style={styles.mockupGrid}>
