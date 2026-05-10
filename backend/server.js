@@ -72,6 +72,8 @@ app.get("/api/image-proxy", async (req, res) => {
   }
 });
 
+Bytt endpointen i server.js med denne debug-versjonen:
+
 app.get("/api/slincraze/random-image", async (req, res) => {
   try {
     if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
@@ -99,7 +101,8 @@ app.get("/api/slincraze/random-image", async (req, res) => {
 
     if (images.length === 0) {
       return res.status(404).json({
-        error: "No SlinCraze images found"
+        error: "No SlinCraze images found",
+        googleResponse: response.data
       });
     }
 
@@ -112,10 +115,11 @@ app.get("/api/slincraze/random-image", async (req, res) => {
       sourceUrl: randomImage.image?.contextLink
     });
   } catch (error) {
-    console.error("Random SlinCraze image failed:", error.message);
+    console.error("Random SlinCraze image failed:", error.response?.data || error.message);
 
     res.status(500).json({
-      error: "Could not fetch random SlinCraze image"
+      error: "Could not fetch random SlinCraze image",
+      details: error.response?.data || error.message
     });
   }
 });
