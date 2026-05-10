@@ -13,8 +13,6 @@ function App() {
   const [designStyle, setDesignStyle] = useState("Dark");
   const [imageVariation, setImageVariation] = useState("Auto");
   const [dailyPlan, setDailyPlan] = useState([]);
-  const [facebookQueue, setFacebookQueue] = useState([]);
-  const [facebookLoading, setFacebookLoading] = useState(false);
   const canvasRef = useRef(null);
 
   const selectedProduct = products[selectedIndex];
@@ -30,19 +28,6 @@ function App() {
       setStatus(`Fant ${data.length} produkter`);
     } catch {
       setStatus("Kunne ikke hente produkter");
-    }
-  }
-
-  async function loadFacebookQueue() {
-    try {
-      setFacebookLoading(true);
-      const response = await fetch(`${BACKEND_URL}/api/facebook/schedule`);
-      const data = await response.json();
-      setFacebookQueue(data || []);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setFacebookLoading(false);
     }
   }
 
@@ -79,63 +64,9 @@ function App() {
       }
 
       setStatus("Facebook-post publisert 🔥");
-      loadFacebookQueue();
     } catch (error) {
       console.error(error);
       setStatus("Kunne ikke poste til Facebook");
-      alert(error.message);
-    }
-  }
-
-  async function scheduleFacebookPost(hour) {
-    if (!selectedProduct) {
-      alert("Velg et produkt først");
-      return;
-    }
-
-    if (!caption) {
-      alert("Lag en caption først");
-      return;
-    }
-
-    try {
-      const scheduledDate = new Date();
-
-      scheduledDate.setHours(hour);
-      scheduledDate.setMinutes(0);
-      scheduledDate.setSeconds(0);
-      scheduledDate.setMilliseconds(0);
-
-      if (scheduledDate < new Date()) {
-        scheduledDate.setDate(scheduledDate.getDate() + 1);
-      }
-
-      setStatus(`Planlegger Facebook-post kl ${hour}:00`);
-
-      const response = await fetch(`${BACKEND_URL}/api/facebook/schedule`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          caption,
-          imageUrl: selectedProduct.imageUrl,
-          productName: selectedProduct.name,
-          scheduledTime: scheduledDate.toISOString()
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Scheduling failed");
-      }
-
-      setStatus(`Facebook-post planlagt til ${hour}:00 ✅`);
-      loadFacebookQueue();
-    } catch (error) {
-      console.error(error);
-      setStatus("Kunne ikke planlegge Facebook-post");
       alert(error.message);
     }
   }
@@ -227,7 +158,7 @@ function App() {
         imageUrl: product?.imageUrl || "",
         hook: slot.hook,
         caption: `${generateMerchCaption(slot.type)}\n\n${product?.name || ""}\n${product?.url || ""}`,
-        status: "Planlagt"
+        status: "Klar"
       };
     });
 
@@ -251,7 +182,7 @@ function App() {
       setSelectedIndex(productIndex);
     }
 
-    setStatus(`Valgte planlagt innlegg kl ${post.time}`);
+    setStatus(`Valgte innlegg kl ${post.time}`);
   }
 
   function markAsPosted(postId) {
@@ -720,7 +651,6 @@ function App() {
 
   useEffect(() => {
     loadProducts();
-    loadFacebookQueue();
 
     const savedPlan = localStorage.getItem("slincrazeDailyPlan");
 
@@ -732,13 +662,14 @@ function App() {
   const styles = {
     page: {
       minHeight: "100vh",
-      background: "linear-gradient(135deg, #070707, #181818)",
+      background:
+        "radial-gradient(circle at top left, #2b2b2b, transparent 34%), linear-gradient(135deg, #050505, #141414)",
       color: "#f5f5f5",
       fontFamily: "Arial, sans-serif",
-      padding: "32px"
+      padding: "34px"
     },
     shell: {
-      maxWidth: "1200px",
+      maxWidth: "1280px",
       margin: "0 auto"
     },
     header: {
@@ -748,59 +679,72 @@ function App() {
       gap: "20px",
       marginBottom: "28px"
     },
+    badge: {
+      display: "inline-block",
+      padding: "7px 12px",
+      background: "rgba(255,255,255,0.1)",
+      border: "1px solid rgba(255,255,255,0.14)",
+      borderRadius: "999px",
+      color: "#bbb",
+      fontSize: "13px",
+      marginBottom: "12px"
+    },
     title: {
       margin: 0,
-      fontSize: "42px",
-      letterSpacing: "-1px",
+      fontSize: "44px",
+      letterSpacing: "-1.5px",
       color: "#fff"
     },
     sub: {
       color: "#aaa",
-      marginTop: "8px"
+      marginTop: "9px"
     },
     card: {
-      background: "rgba(255,255,255,0.06)",
-      border: "1px solid rgba(255,255,255,0.12)",
-      borderRadius: "24px",
-      padding: "22px",
-      boxShadow: "0 20px 60px rgba(0,0,0,0.35)"
+      background: "rgba(255,255,255,0.065)",
+      border: "1px solid rgba(255,255,255,0.13)",
+      borderRadius: "26px",
+      padding: "24px",
+      boxShadow: "0 24px 70px rgba(0,0,0,0.38)",
+      backdropFilter: "blur(10px)"
     },
     grid: {
       display: "grid",
-      gridTemplateColumns: "380px 1fr",
+      gridTemplateColumns: "390px 1fr",
       gap: "24px"
     },
     planGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+      gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))",
       gap: "14px",
       marginTop: "16px"
     },
     planCard: {
-      background: "#111",
-      border: "1px solid #333",
-      borderRadius: "18px",
-      padding: "16px"
+      background: "rgba(0,0,0,0.33)",
+      border: "1px solid rgba(255,255,255,0.12)",
+      borderRadius: "20px",
+      padding: "17px"
     },
     label: {
-      color: "#aaa",
+      color: "#b5b5b5",
       fontSize: "14px",
       marginBottom: "8px",
-      display: "block"
+      display: "block",
+      fontWeight: "700"
     },
     select: {
       width: "100%",
-      background: "#111",
+      background: "#0f0f0f",
       color: "#fff",
-      border: "1px solid #444",
-      borderRadius: "14px",
+      border: "1px solid #3a3a3a",
+      borderRadius: "15px",
       padding: "14px",
       fontSize: "15px",
-      marginBottom: "18px"
+      marginBottom: "18px",
+      outline: "none"
     },
     image: {
       width: "100%",
-      borderRadius: "20px",
+      borderRadius: "22px",
       background: "#222",
       marginBottom: "18px"
     },
@@ -808,19 +752,28 @@ function App() {
       background: "#fff",
       color: "#000",
       border: "none",
-      borderRadius: "14px",
+      borderRadius: "15px",
       padding: "12px 16px",
       cursor: "pointer",
-      fontWeight: "700"
+      fontWeight: "800"
+    },
+    facebookButton: {
+      background: "#1877F2",
+      color: "#fff",
+      border: "none",
+      borderRadius: "15px",
+      padding: "12px 16px",
+      cursor: "pointer",
+      fontWeight: "800"
     },
     darkButton: {
-      background: "#222",
+      background: "rgba(255,255,255,0.06)",
       color: "#fff",
-      border: "1px solid #444",
-      borderRadius: "14px",
+      border: "1px solid rgba(255,255,255,0.18)",
+      borderRadius: "15px",
       padding: "12px 16px",
       cursor: "pointer",
-      fontWeight: "700"
+      fontWeight: "800"
     },
     buttons: {
       display: "flex",
@@ -831,14 +784,15 @@ function App() {
     textarea: {
       width: "100%",
       minHeight: "190px",
-      background: "#0f0f0f",
+      background: "#0d0d0d",
       color: "#fff",
       border: "1px solid #333",
-      borderRadius: "16px",
+      borderRadius: "18px",
       padding: "16px",
       fontSize: "16px",
       marginTop: "18px",
-      boxSizing: "border-box"
+      boxSizing: "border-box",
+      outline: "none"
     },
     formatRow: {
       display: "flex",
@@ -850,8 +804,17 @@ function App() {
       width: "100%",
       maxWidth: "520px",
       background: "#222",
-      borderRadius: "20px",
-      marginTop: "22px"
+      borderRadius: "22px",
+      marginTop: "22px",
+      border: "1px solid rgba(255,255,255,0.12)"
+    },
+    sectionTitle: {
+      marginTop: 0,
+      marginBottom: "8px",
+      color: "#fff"
+    },
+    muted: {
+      color: "#aaa"
     }
   };
 
@@ -860,6 +823,7 @@ function App() {
       <div style={styles.shell}>
         <header style={styles.header}>
           <div>
+            <span style={styles.badge}>Creator merch engine</span>
             <h1 style={styles.title}>SlinCraze Merch Promoter</h1>
             <p style={styles.sub}>{status}</p>
           </div>
@@ -870,7 +834,10 @@ function App() {
         </header>
 
         <section style={{ ...styles.card, marginBottom: "24px" }}>
-          <h2 style={{ marginTop: 0 }}>Dagens publiseringsplan</h2>
+          <h2 style={styles.sectionTitle}>Dagens innholdsplan</h2>
+          <p style={styles.muted}>
+            Generer 4 ferdige poster med produkt, hook, caption, format og designstil.
+          </p>
 
           <div style={styles.buttons}>
             <button style={styles.button} onClick={generateDailyPlan}>
@@ -886,10 +853,10 @@ function App() {
             <div style={styles.planGrid}>
               {dailyPlan.map((post) => (
                 <div key={post.id} style={styles.planCard}>
-                  <h3>{post.time}</h3>
-                  <p>{post.platform}</p>
+                  <h3 style={{ margin: "0 0 8px" }}>{post.time}</h3>
+                  <p style={styles.muted}>{post.platform}</p>
                   <strong>{post.productName}</strong>
-                  <p>{post.format}</p>
+                  <p style={styles.muted}>{post.format}</p>
                   <p>Design: {post.designStyle || "Dark"}</p>
                   <p>Variation: {post.imageVariation || "Auto"}</p>
                   <p>Status: {post.status}</p>
@@ -917,6 +884,8 @@ function App() {
 
         <main style={styles.grid}>
           <section style={styles.card}>
+            <h2 style={styles.sectionTitle}>Produkt</h2>
+
             <label style={styles.label}>Produktvalg</label>
 
             <select
@@ -943,13 +912,13 @@ function App() {
                   {selectedProduct.name}
                 </h2>
 
-                <p style={{ color: "#aaa" }}>{selectedProduct.vibe}</p>
+                <p style={styles.muted}>{selectedProduct.vibe}</p>
 
                 <a
                   href={selectedProduct.url}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ color: "#fff" }}
+                  style={{ color: "#fff", fontWeight: "700" }}
                 >
                   Åpne produkt
                 </a>
@@ -958,6 +927,8 @@ function App() {
           </section>
 
           <section style={styles.card}>
+            <h2 style={styles.sectionTitle}>Lag promo</h2>
+
             <label style={styles.label}>Format</label>
 
             <div style={styles.formatRow}>
@@ -1052,29 +1023,8 @@ function App() {
                 Last ned bilde
               </button>
 
-              <button style={styles.button} onClick={publishToFacebookNow}>
+              <button style={styles.facebookButton} onClick={publishToFacebookNow}>
                 Publiser til Facebook nå
-              </button>
-
-              <button
-                style={styles.darkButton}
-                onClick={() => scheduleFacebookPost(9)}
-              >
-                Planlegg 09:00
-              </button>
-
-              <button
-                style={styles.darkButton}
-                onClick={() => scheduleFacebookPost(14)}
-              >
-                Planlegg 14:00
-              </button>
-
-              <button
-                style={styles.darkButton}
-                onClick={() => scheduleFacebookPost(20)}
-              >
-                Planlegg 20:00
               </button>
             </div>
 
@@ -1086,39 +1036,6 @@ function App() {
             />
 
             <canvas ref={canvasRef} style={styles.canvas} />
-
-            <div style={{ marginTop: "28px" }}>
-              <h2>Facebook-kø</h2>
-
-              {facebookLoading && <p>Laster Facebook-kø...</p>}
-
-              {facebookQueue.length === 0 && !facebookLoading && (
-                <p style={{ color: "#aaa" }}>Ingen Facebook-poster i kø.</p>
-              )}
-
-              {facebookQueue.map((post) => (
-                <div
-                  key={post.id}
-                  style={{
-                    background: "#111",
-                    border: "1px solid #333",
-                    borderRadius: "16px",
-                    padding: "14px",
-                    marginBottom: "12px"
-                  }}
-                >
-                  <strong>{post.productName || "Facebook-post"}</strong>
-
-                  <p>
-                    {post.scheduledTime
-                      ? new Date(post.scheduledTime).toLocaleString()
-                      : "Ingen tid"}
-                  </p>
-
-                  <p>Status: {post.status}</p>
-                </div>
-              ))}
-            </div>
           </section>
         </main>
       </div>
