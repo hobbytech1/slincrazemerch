@@ -13,6 +13,8 @@ function App() {
   const [designStyle, setDesignStyle] = useState("Dark");
   const [imageVariation, setImageVariation] = useState("Auto");
   const [dailyPlan, setDailyPlan] = useState([]);
+  const [facebookQueue, setFacebookQueue] = useState([]);
+  const [facebookLoading, setFacebookLoading] = useState(false);
   const canvasRef = useRef(null);
 
   const selectedProduct = products[selectedIndex];
@@ -28,6 +30,113 @@ function App() {
       setStatus(`Fant ${data.length} produkter`);
     } catch {
       setStatus("Kunne ikke hente produkter");
+    }
+  }
+
+  async function loadFacebookQueue() {
+    try {
+      setFacebookLoading(true);
+      const response = await fetch(`${BACKEND_URL}/api/facebook/schedule`);
+      const data = await response.json();
+      setFacebookQueue(data || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setFacebookLoading(false);
+    }
+  }
+
+  async function publishToFacebookNow() {
+    if (!selectedProduct) {
+      alert("Velg et produkt først");
+      return;
+    }
+
+    if (!caption) {
+      alert("Lag en caption først");
+      return;
+    }
+
+    try {
+      setStatus("Poster til Facebook...");
+
+      const response = await fetch(`${BACKEND_URL}/api/facebook/publish-now`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          caption,
+          imageUrl: selectedProduct.imageUrl,
+          productName: selectedProduct.name
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Facebook posting failed");
+      }
+
+      setStatus("Facebook-post publisert 🔥");
+      loadFacebookQueue();
+    } catch (error) {
+      console.error(error);
+      setStatus("Kunne ikke poste til Facebook");
+      alert(error.message);
+    }
+  }
+
+  async function scheduleFacebookPost(hour) {
+    if (!selectedProduct) {
+      alert("Velg et produkt først");
+      return;
+    }
+
+    if (!caption) {
+      alert("Lag en caption først");
+      return;
+    }
+
+    try {
+      const scheduledDate = new Date();
+
+      scheduledDate.setHours(hour);
+      scheduledDate.setMinutes(0);
+      scheduledDate.setSeconds(0);
+      scheduledDate.setMilliseconds(0);
+
+      if (scheduledDate < new Date()) {
+        scheduledDate.setDate(scheduledDate.getDate() + 1);
+      }
+
+      setStatus(`Planlegger Facebook-post kl ${hour}:00`);
+
+      const response = await fetch(`${BACKEND_URL}/api/facebook/schedule`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          caption,
+          imageUrl: selectedProduct.imageUrl,
+          productName: selectedProduct.name,
+          scheduledTime: scheduledDate.toISOString()
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Scheduling failed");
+      }
+
+      setStatus(`Facebook-post planlagt til ${hour}:00 ✅`);
+      loadFacebookQueue();
+    } catch (error) {
+      console.error(error);
+      setStatus("Kunne ikke planlegge Facebook-post");
+      alert(error.message);
     }
   }
 
@@ -259,8 +368,6 @@ function App() {
 
     let drawWidth = size.width;
     let drawHeight = size.height;
-    let drawX = 0;
-    let drawY = 0;
 
     if (imageRatio > canvasRatio) {
       drawHeight = size.height;
@@ -273,8 +380,10 @@ function App() {
     drawWidth *= settings.zoom;
     drawHeight *= settings.zoom;
 
-    drawX = (size.width - drawWidth) / 2 + size.width * settings.offsetX;
-    drawY = (size.height - drawHeight) / 2 + size.height * settings.offsetY;
+    const drawX =
+      (size.width - drawWidth) / 2 + size.width * settings.offsetX;
+    const drawY =
+      (size.height - drawHeight) / 2 + size.height * settings.offsetY;
 
     if (settings.blurBackground) {
       ctx.save();
@@ -319,9 +428,8 @@ function App() {
 
   function drawStickers(ctx, size) {
     const stickers = ["NEW", "DROP", "😭🔥", "JATTA", "LIMITED", "FIT CHECK"];
-    const stickerCount = 3;
 
-    for (let i = 0; i < stickerCount; i++) {
+    for (let i = 0; i < 3; i++) {
       const text = stickers[Math.floor(Math.random() * stickers.length)];
       const x = Math.random() * size.width * 0.7 + size.width * 0.12;
       const y = Math.random() * size.height * 0.45 + size.height * 0.12;
@@ -393,7 +501,11 @@ function App() {
 
     ctx.font = `${Math.round(size.width * 0.033)}px Arial`;
     ctx.fillStyle = "rgba(255,255,255,0.82)";
-    ctx.fillText("slincraze.myspreadshop.no", size.width / 2, overlayY + overlayHeight - 32);
+    ctx.fillText(
+      "slincraze.myspreadshop.no",
+      size.width / 2,
+      overlayY + overlayHeight - 32
+    );
   }
 
   function drawCinematicStyle(ctx, size, isVertical) {
@@ -420,7 +532,11 @@ function App() {
 
     ctx.font = `${Math.round(size.width * 0.032)}px Arial`;
     ctx.fillStyle = "rgba(255,255,255,0.78)";
-    ctx.fillText("SLINCRAZE MERCH", size.width / 2, size.height - Math.round(size.height * 0.08));
+    ctx.fillText(
+      "SLINCRAZE MERCH",
+      size.width / 2,
+      size.height - Math.round(size.height * 0.08)
+    );
   }
 
   function drawMinimalStyle(ctx, size) {
@@ -496,13 +612,22 @@ function App() {
 
     ctx.strokeStyle = "white";
     ctx.lineWidth = Math.round(size.width * 0.018);
-    ctx.strokeRect(border, border, size.width - border * 2, size.height - border * 2);
+    ctx.strokeRect(
+      border,
+      border,
+      size.width - border * 2,
+      size.height - border * 2
+    );
 
     ctx.textAlign = "center";
     ctx.fillStyle = "white";
 
     ctx.font = `bold ${Math.round(size.width * 0.045)}px Arial`;
-    ctx.fillText("SLINCRAZE", size.width / 2, border + Math.round(size.width * 0.065));
+    ctx.fillText(
+      "SLINCRAZE",
+      size.width / 2,
+      border + Math.round(size.width * 0.065)
+    );
 
     const fontSize = isVertical
       ? Math.round(size.width * 0.075)
@@ -521,7 +646,11 @@ function App() {
 
     ctx.font = `${Math.round(size.width * 0.028)}px Arial`;
     ctx.fillStyle = "rgba(255,255,255,0.78)";
-    ctx.fillText("MERCH DROP", size.width / 2, size.height - border - Math.round(size.width * 0.03));
+    ctx.fillText(
+      "MERCH DROP",
+      size.width / 2,
+      size.height - border - Math.round(size.width * 0.03)
+    );
   }
 
   function generatePromoImage() {
@@ -549,25 +678,11 @@ function App() {
         format === "Instagram Story" ||
         format === "Snapchat Story";
 
-      if (designStyle === "Dark") {
-        drawDarkStyle(ctx, size, isVertical);
-      }
-
-      if (designStyle === "Cinematic") {
-        drawCinematicStyle(ctx, size, isVertical);
-      }
-
-      if (designStyle === "Minimal") {
-        drawMinimalStyle(ctx, size);
-      }
-
-      if (designStyle === "Chaos") {
-        drawChaosStyle(ctx, size, isVertical);
-      }
-
-      if (designStyle === "Magazine") {
-        drawMagazineStyle(ctx, size, isVertical);
-      }
+      if (designStyle === "Dark") drawDarkStyle(ctx, size, isVertical);
+      if (designStyle === "Cinematic") drawCinematicStyle(ctx, size, isVertical);
+      if (designStyle === "Minimal") drawMinimalStyle(ctx, size);
+      if (designStyle === "Chaos") drawChaosStyle(ctx, size, isVertical);
+      if (designStyle === "Magazine") drawMagazineStyle(ctx, size, isVertical);
 
       ctx.textAlign = "left";
       setStatus(`Promo-bilde generert: ${designStyle} / ${usedVariation}`);
@@ -605,6 +720,7 @@ function App() {
 
   useEffect(() => {
     loadProducts();
+    loadFacebookQueue();
 
     const savedPlan = localStorage.getItem("slincrazeDailyPlan");
 
@@ -870,7 +986,9 @@ function App() {
                   <button
                     key={item}
                     onClick={() => setDesignStyle(item)}
-                    style={designStyle === item ? styles.button : styles.darkButton}
+                    style={
+                      designStyle === item ? styles.button : styles.darkButton
+                    }
                   >
                     {item}
                   </button>
@@ -933,6 +1051,31 @@ function App() {
               <button style={styles.darkButton} onClick={downloadPromoImage}>
                 Last ned bilde
               </button>
+
+              <button style={styles.button} onClick={publishToFacebookNow}>
+                Publiser til Facebook nå
+              </button>
+
+              <button
+                style={styles.darkButton}
+                onClick={() => scheduleFacebookPost(9)}
+              >
+                Planlegg 09:00
+              </button>
+
+              <button
+                style={styles.darkButton}
+                onClick={() => scheduleFacebookPost(14)}
+              >
+                Planlegg 14:00
+              </button>
+
+              <button
+                style={styles.darkButton}
+                onClick={() => scheduleFacebookPost(20)}
+              >
+                Planlegg 20:00
+              </button>
             </div>
 
             <textarea
@@ -943,6 +1086,39 @@ function App() {
             />
 
             <canvas ref={canvasRef} style={styles.canvas} />
+
+            <div style={{ marginTop: "28px" }}>
+              <h2>Facebook-kø</h2>
+
+              {facebookLoading && <p>Laster Facebook-kø...</p>}
+
+              {facebookQueue.length === 0 && !facebookLoading && (
+                <p style={{ color: "#aaa" }}>Ingen Facebook-poster i kø.</p>
+              )}
+
+              {facebookQueue.map((post) => (
+                <div
+                  key={post.id}
+                  style={{
+                    background: "#111",
+                    border: "1px solid #333",
+                    borderRadius: "16px",
+                    padding: "14px",
+                    marginBottom: "12px"
+                  }}
+                >
+                  <strong>{post.productName || "Facebook-post"}</strong>
+
+                  <p>
+                    {post.scheduledTime
+                      ? new Date(post.scheduledTime).toLocaleString()
+                      : "Ingen tid"}
+                  </p>
+
+                  <p>Status: {post.status}</p>
+                </div>
+              ))}
+            </div>
           </section>
         </main>
       </div>
