@@ -1,76 +1,29 @@
 import express from "express";
 import cors from "cors";
-import axios from "axios";
 import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import cron from "node-cron";
 
 const app = express();
-const PORT = process.env.PORT || 3001;
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
-app.get("/", (req, res) => {
-  res.send("SlinCraze backend running. Go to /api/products");
-});
-
-app.get("/api/products", (req, res) => {
-  try {
-    const filePath = path.join(__dirname, "products.json");
-    const rawData = fs.readFileSync(filePath, "utf8");
-    const products = JSON.parse(rawData);
-
-    res.json(products);
-  } catch (error) {
-    console.error("Could not load products:", error.message);
-
-    res.status(500).json({
-      error: "Could not load products"
-    });
-  }
-});
-
-app.get("/api/image-proxy", async (req, res) => {
-  try {
-    const imageUrl = req.query.url;
-
-    if (!imageUrl) {
-      return res.status(400).send("Missing image URL");
-    }
-
-    const response = await axios.get(imageUrl, {
-      responseType: "arraybuffer",
-      headers: {
-        "User-Agent": "Mozilla/5.0 SlinCrazeMerchBot/1.0"
-      },
-      timeout: 30000
-    });
-
-    res.setHeader(
-      "Content-Type",
-      response.headers["content-type"] || "image/jpeg"
-    );
-
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cache-Control", "public, max-age=86400");
-
-    res.send(response.data);
-  } catch (error) {
-    console.error("Image proxy failed:", error.message);
-    res.status(500).send("Could not proxy image");
-  }
-});
-
-import cron from "node-cron";
+const PORT = process.env.PORT || 3001;
 
 const FACEBOOK_PAGE_ID = process.env.FACEBOOK_PAGE_ID;
 const FACEBOOK_PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
 
+const GRAPH_VERSION = "v20.0";
 const SCHEDULE_FILE = "./facebookSchedule.json";
+
+const products = [
+  {
+    name: "SlinCraze Merch",
+    vibe: "Official merch",
+    url: "https://slincraze.myspreadshop.no",
+    imageUrl: "https://image.spreadshirtmedia.net/image-server/v1/compositions/T210A2PA4301PT17X40Y34D1038452155W25000H25000/views/1,width=1200,height=1200,appearanceId=2,backgroundColor=F2F2F2/no-minimum.jpg"
+  }
+];
 
 function readSchedule() {
   if (!fs.existsSync(SCHEDULE_FILE)) {
@@ -93,15 +46,17 @@ async function publishFacebookPost(post) {
     throw new Error("Missing FACEBOOK_PAGE_ID or FACEBOOK_PAGE_ACCESS_TOKEN");
   }
 
-  const endpoint = post.imageUrl
-    ? `https://graph.facebook.com/v19.0/${FACEBOOK_PAGE_ID}/photos`
-    : `https://graph.facebook.com/v19.0/${FACEBOOK_PAGE_ID}/feed`;
+  const hasImage = Boolean(post.imageUrl);
+
+  const endpoint = hasImage
+    ? `https://graph.facebook.com/${GRAPH_VERSION}/${FACEBOOK_PAGE_ID}/photos`
+    : `https://graph.facebook.com/${GRAPH_VERSION}/${FACEBOOK_PAGE_ID}/feed`;
 
   const body = new URLSearchParams();
 
   body.append("access_token", FACEBOOK_PAGE_ACCESS_TOKEN);
 
-  if (post.imageUrl) {
+  if (hasImage) {
     body.append("url", post.imageUrl);
     body.append("caption", post.caption || "");
   } else {
@@ -122,6 +77,48 @@ async function publishFacebookPost(post) {
   return data;
 }
 
+app.get("/", (req, res) => {
+  res.json({
+    status: "SlinCraze Merch backend running"
+  });
+});
+
+app.get("/api/products", (req, res) => {
+  res.json(products);
+});
+
+app.get("/api/image-proxy", async (req, res) => {
+  try {
+    const imageUrl = req.query.url;
+
+    if (!imageUrl) {
+      return res.status(400).json({ error: "Missing image url" });
+    }
+
+    const response = await fetch(imageUrl);
+
+    if (!response.ok) {
+      return res.status(500).json({ error: "Could not fetch image" });
+    }
+
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.send(buffer);
+  } catch (error) {
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
+app.get("/api/facebook/schedule", (req, res) => {
+  res.json(readSchedule());
+});
+
 app.post("/api/facebook/schedule", (req, res) => {
   const { caption, imageUrl, scheduledTime, productName } = req.body;
 
@@ -137,8 +134,8 @@ app.post("/api/facebook/schedule", (req, res) => {
     id: Date.now().toString(),
     caption,
     imageUrl: imageUrl || "",
-    scheduledTime,
     productName: productName || "",
+    scheduledTime,
     status: "scheduled",
     createdAt: new Date().toISOString()
   };
@@ -152,13 +149,22 @@ app.post("/api/facebook/schedule", (req, res) => {
   });
 });
 
-app.get("/api/facebook/schedule", (req, res) => {
-  res.json(readSchedule());
-});
-
 app.post("/api/facebook/publish-now", async (req, res) => {
   try {
-    const result = await publishFacebookPost(req.body);
+    const { caption, imageUrl, productName } = req.body;
+
+    if (!caption) {
+      return res.status(400).json({
+        success: false,
+        error: "Caption is required"
+      });
+    }
+
+    const result = await publishFacebookPost({
+      caption,
+      imageUrl,
+      productName
+    });
 
     res.json({
       success: true,
@@ -172,41 +178,47 @@ app.post("/api/facebook/publish-now", async (req, res) => {
   }
 });
 
-cron.schedule("0 9,14,20 * * *", async () => {
-  const posts = readSchedule();
-  const now = new Date();
+cron.schedule(
+  "* * * * *",
+  async () => {
+    const posts = readSchedule();
+    const now = new Date();
 
-  let changed = false;
+    let changed = false;
 
-  for (const post of posts) {
-    if (post.status !== "scheduled") continue;
+    for (const post of posts) {
+      if (post.status !== "scheduled") continue;
 
-    const scheduledDate = new Date(post.scheduledTime);
+      const scheduledDate = new Date(post.scheduledTime);
 
-    if (scheduledDate <= now) {
-      try {
-        const result = await publishFacebookPost(post);
+      if (scheduledDate <= now) {
+        try {
+          const result = await publishFacebookPost(post);
 
-        post.status = "posted";
-        post.postedAt = new Date().toISOString();
-        post.facebookResult = result;
+          post.status = "posted";
+          post.postedAt = new Date().toISOString();
+          post.facebookResult = result;
 
-        changed = true;
-      } catch (error) {
-        post.status = "failed";
-        post.error = error.message;
-        post.failedAt = new Date().toISOString();
+          changed = true;
+        } catch (error) {
+          post.status = "failed";
+          post.error = error.message;
+          post.failedAt = new Date().toISOString();
 
-        changed = true;
+          changed = true;
+        }
       }
     }
-  }
 
-  if (changed) {
-    writeSchedule(posts);
+    if (changed) {
+      writeSchedule(posts);
+    }
+  },
+  {
+    timezone: "Europe/Oslo"
   }
-});
+);
 
 app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
