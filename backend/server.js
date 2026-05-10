@@ -4,12 +4,19 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import cron from "node-cron";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+const FACEBOOK_PAGE_ID = process.env.FACEBOOK_PAGE_ID;
+const FACEBOOK_PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
+const GRAPH_VERSION = "v20.0";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const SCHEDULE_FILE = path.join(__dirname, "facebookSchedule.json");
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
@@ -65,13 +72,6 @@ app.get("/api/image-proxy", async (req, res) => {
   }
 });
 
-import cron from "node-cron";
-
-const FACEBOOK_PAGE_ID = process.env.FACEBOOK_PAGE_ID;
-const FACEBOOK_PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
-
-const SCHEDULE_FILE = "./facebookSchedule.json";
-
 function readSchedule() {
   if (!fs.existsSync(SCHEDULE_FILE)) {
     return [];
@@ -93,15 +93,16 @@ async function publishFacebookPost(post) {
     throw new Error("Missing FACEBOOK_PAGE_ID or FACEBOOK_PAGE_ACCESS_TOKEN");
   }
 
-  const endpoint = post.imageUrl
-    ? `https://graph.facebook.com/v19.0/${FACEBOOK_PAGE_ID}/photos`
-    : `https://graph.facebook.com/v19.0/${FACEBOOK_PAGE_ID}/feed`;
+  const hasImage = Boolean(post.imageUrl);
+
+  const endpoint = hasImage
+    ? `https://graph.facebook.com/${GRAPH_VERSION}/${FACEBOOK_PAGE_ID}/photos`
+    : `https://graph.facebook.com/${GRAPH_VERSION}/${FACEBOOK_PAGE_ID}/feed`;
 
   const body = new URLSearchParams();
-
   body.append("access_token", FACEBOOK_PAGE_ACCESS_TOKEN);
 
-  if (post.imageUrl) {
+  if (hasImage) {
     body.append("url", post.imageUrl);
     body.append("caption", post.caption || "");
   } else {
@@ -158,13 +159,28 @@ app.get("/api/facebook/schedule", (req, res) => {
 
 app.post("/api/facebook/publish-now", async (req, res) => {
   try {
-    const result = await publishFacebookPost(req.body);
+    const { caption, imageUrl, productName } = req.body;
+
+    if (!caption) {
+      return res.status(400).json({
+        success: false,
+        error: "Caption is required"
+      });
+    }
+
+    const result = await publishFacebookPost({
+      caption,
+      imageUrl,
+      productName
+    });
 
     res.json({
       success: true,
       result
     });
   } catch (error) {
+    console.error("Facebook publish failed:", error.message);
+
     res.status(500).json({
       success: false,
       error: error.message
@@ -172,40 +188,46 @@ app.post("/api/facebook/publish-now", async (req, res) => {
   }
 });
 
-cron.schedule("0 9,14,20 * * *", async () => {
-  const posts = readSchedule();
-  const now = new Date();
+cron.schedule(
+  "* * * * *",
+  async () => {
+    const posts = readSchedule();
+    const now = new Date();
 
-  let changed = false;
+    let changed = false;
 
-  for (const post of posts) {
-    if (post.status !== "scheduled") continue;
+    for (const post of posts) {
+      if (post.status !== "scheduled") continue;
 
-    const scheduledDate = new Date(post.scheduledTime);
+      const scheduledDate = new Date(post.scheduledTime);
 
-    if (scheduledDate <= now) {
-      try {
-        const result = await publishFacebookPost(post);
+      if (scheduledDate <= now) {
+        try {
+          const result = await publishFacebookPost(post);
 
-        post.status = "posted";
-        post.postedAt = new Date().toISOString();
-        post.facebookResult = result;
+          post.status = "posted";
+          post.postedAt = new Date().toISOString();
+          post.facebookResult = result;
 
-        changed = true;
-      } catch (error) {
-        post.status = "failed";
-        post.error = error.message;
-        post.failedAt = new Date().toISOString();
+          changed = true;
+        } catch (error) {
+          post.status = "failed";
+          post.error = error.message;
+          post.failedAt = new Date().toISOString();
 
-        changed = true;
+          changed = true;
+        }
       }
     }
-  }
 
-  if (changed) {
-    writeSchedule(posts);
+    if (changed) {
+      writeSchedule(posts);
+    }
+  },
+  {
+    timezone: "Europe/Oslo"
   }
-});
+);
 
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);
