@@ -13,6 +13,7 @@ function App() {
   const [designStyle, setDesignStyle] = useState("Original");
   const [imageVariation, setImageVariation] = useState("Auto");
   const [dailyPlan, setDailyPlan] = useState([]);
+  const [mockups, setMockups] = useState([]);
   const canvasRef = useRef(null);
 
   const selectedProduct = products[selectedIndex];
@@ -200,11 +201,11 @@ function App() {
     setStatus("Dagsplan slettet");
   }
 
-  function getCanvasSize() {
+  function getCanvasSize(customFormat = format) {
     if (
-      format === "TikTok" ||
-      format === "Instagram Story" ||
-      format === "Snapchat Story"
+      customFormat === "TikTok" ||
+      customFormat === "Instagram Story" ||
+      customFormat === "Snapchat Story"
     ) {
       return { width: 1080, height: 1920 };
     }
@@ -244,54 +245,54 @@ function App() {
     });
   }
 
- function getVariationSettings() {
-  const actualVariation =
-    imageVariation === "Auto" ? pickRandomVariation() : imageVariation;
+  function getVariationSettings(style = designStyle, variation = imageVariation) {
+    const actualVariation =
+      variation === "Auto" ? pickRandomVariation() : variation;
 
-  const settings = {
-    variation: actualVariation,
-    zoom: 1,
-    offsetX: 0,
-    offsetY: 0,
-    rotation: 0,
-    blurBackground: false,
-    darken: designStyle === "Original" ? 0 : 0.15,
-    vignette: designStyle === "Original" ? false : true
-  };
+    const settings = {
+      variation: actualVariation,
+      zoom: 1,
+      offsetX: 0,
+      offsetY: 0,
+      rotation: 0,
+      blurBackground: false,
+      darken: style === "Original" ? 0 : 0.15,
+      vignette: style === "Original" ? false : true
+    };
 
-  if (designStyle === "Original") {
+    if (style === "Original") {
+      return settings;
+    }
+
+    if (actualVariation === "Zoom") {
+      settings.zoom = 1.22;
+      settings.darken = 0.28;
+    }
+
+    if (actualVariation === "Left") {
+      settings.zoom = 1.1;
+      settings.offsetX = -0.18;
+    }
+
+    if (actualVariation === "Right") {
+      settings.zoom = 1.1;
+      settings.offsetX = 0.18;
+    }
+
+    if (actualVariation === "Top") {
+      settings.zoom = 1.12;
+      settings.offsetY = -0.16;
+    }
+
+    if (actualVariation === "Chaos") {
+      settings.zoom = 1.18;
+      settings.rotation = Math.random() > 0.5 ? 0.035 : -0.035;
+      settings.blurBackground = true;
+      settings.darken = 0.35;
+    }
+
     return settings;
   }
-
-  if (actualVariation === "Zoom") {
-    settings.zoom = 1.22;
-    settings.darken = 0.28;
-  }
-
-  if (actualVariation === "Left") {
-    settings.zoom = 1.1;
-    settings.offsetX = -0.18;
-  }
-
-  if (actualVariation === "Right") {
-    settings.zoom = 1.1;
-    settings.offsetX = 0.18;
-  }
-
-  if (actualVariation === "Top") {
-    settings.zoom = 1.12;
-    settings.offsetY = -0.16;
-  }
-
-  if (actualVariation === "Chaos") {
-    settings.zoom = 1.18;
-    settings.rotation = Math.random() > 0.5 ? 0.035 : -0.035;
-    settings.blurBackground = true;
-    settings.darken = 0.35;
-  }
-
-  return settings;
-}
 
   function drawImageCover(ctx, image, size, settings) {
     const imageRatio = image.width / image.height;
@@ -357,35 +358,35 @@ function App() {
     return settings.variation;
   }
 
-function drawOriginalStyle(ctx, size, isVertical) {
-  ctx.fillStyle = "white";
-  ctx.textAlign = "center";
+  function drawOriginalStyle(ctx, size, isVertical, text = hook) {
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
 
-  const fontSize = isVertical
-    ? Math.round(size.width * 0.075)
-    : Math.round(size.width * 0.055);
+    const fontSize = isVertical
+      ? Math.round(size.width * 0.075)
+      : Math.round(size.width * 0.055);
 
-  ctx.font = `bold ${fontSize}px Arial`;
+    ctx.font = `bold ${fontSize}px Arial`;
 
-  ctx.shadowColor = "rgba(0,0,0,0.75)";
-  ctx.shadowBlur = 12;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 4;
+    ctx.shadowColor = "rgba(0,0,0,0.75)";
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 4;
 
-  drawCenteredWrappedText(
-    ctx,
-    hook,
-    size.width / 2,
-    size.height - Math.round(size.height * 0.12),
-    Math.round(size.width * 0.82),
-    Math.round(fontSize * 1.15)
-  );
+    drawCenteredWrappedText(
+      ctx,
+      text,
+      size.width / 2,
+      size.height - Math.round(size.height * 0.12),
+      Math.round(size.width * 0.82),
+      Math.round(fontSize * 1.15)
+    );
 
-  ctx.shadowColor = "transparent";
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 0;
-}
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+  }
 
   function drawStickers(ctx, size) {
     const stickers = ["NEW", "DROP", "😭🔥", "JATTA", "LIMITED", "FIT CHECK"];
@@ -430,7 +431,7 @@ function drawOriginalStyle(ctx, size, isVertical) {
     }
   }
 
-  function drawDarkStyle(ctx, size, isVertical) {
+  function drawDarkStyle(ctx, size, isVertical, text = hook) {
     const overlayHeight = isVertical
       ? Math.round(size.height * 0.2)
       : Math.round(size.height * 0.24);
@@ -453,7 +454,7 @@ function drawOriginalStyle(ctx, size, isVertical) {
 
     drawCenteredWrappedText(
       ctx,
-      hook,
+      text,
       size.width / 2,
       overlayY + overlayHeight / 2 - 18,
       Math.round(size.width * 0.82),
@@ -469,7 +470,7 @@ function drawOriginalStyle(ctx, size, isVertical) {
     );
   }
 
-  function drawCinematicStyle(ctx, size, isVertical) {
+  function drawCinematicStyle(ctx, size, isVertical, text = hook) {
     ctx.fillStyle = "rgba(0,0,0,0.38)";
     ctx.fillRect(0, 0, size.width, size.height);
 
@@ -484,7 +485,7 @@ function drawOriginalStyle(ctx, size, isVertical) {
 
     drawCenteredWrappedText(
       ctx,
-      hook.toUpperCase(),
+      text.toUpperCase(),
       size.width / 2,
       size.height / 2,
       Math.round(size.width * 0.78),
@@ -500,7 +501,7 @@ function drawOriginalStyle(ctx, size, isVertical) {
     );
   }
 
-  function drawMinimalStyle(ctx, size) {
+  function drawMinimalStyle(ctx, size, text = hook) {
     const padding = Math.round(size.width * 0.055);
 
     ctx.fillStyle = "rgba(0,0,0,0.18)";
@@ -510,7 +511,7 @@ function drawOriginalStyle(ctx, size, isVertical) {
     ctx.fillStyle = "white";
     ctx.font = `bold ${Math.round(size.width * 0.046)}px Arial`;
 
-    const lines = getWrappedLines(ctx, hook, Math.round(size.width * 0.62));
+    const lines = getWrappedLines(ctx, text, Math.round(size.width * 0.62));
     let y = padding + Math.round(size.width * 0.045);
 
     lines.forEach((line) => {
@@ -523,7 +524,7 @@ function drawOriginalStyle(ctx, size, isVertical) {
     ctx.fillText("slincraze.myspreadshop.no", padding, size.height - padding);
   }
 
-  function drawChaosStyle(ctx, size, isVertical) {
+  function drawChaosStyle(ctx, size, isVertical, text = hook) {
     drawStickers(ctx, size);
 
     const boxWidth = Math.round(size.width * 0.86);
@@ -554,7 +555,7 @@ function drawOriginalStyle(ctx, size, isVertical) {
 
     drawCenteredWrappedText(
       ctx,
-      hook,
+      text,
       size.width / 2,
       boxY + boxHeight / 2 - 10,
       Math.round(boxWidth * 0.84),
@@ -565,7 +566,7 @@ function drawOriginalStyle(ctx, size, isVertical) {
     ctx.fillText("😭🔥 JATTA JATTA", size.width / 2, boxY + boxHeight - 28);
   }
 
-  function drawMagazineStyle(ctx, size, isVertical) {
+  function drawMagazineStyle(ctx, size, isVertical, text = hook) {
     const border = Math.round(size.width * 0.045);
 
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -598,7 +599,7 @@ function drawOriginalStyle(ctx, size, isVertical) {
 
     drawCenteredWrappedText(
       ctx,
-      hook,
+      text,
       size.width / 2,
       size.height - Math.round(size.height * 0.2),
       Math.round(size.width * 0.76),
@@ -614,13 +615,39 @@ function drawOriginalStyle(ctx, size, isVertical) {
     );
   }
 
-  function generatePromoImage() {
-    if (!selectedProduct) return;
+  function drawStyle(ctx, size, style, isVertical, text) {
+    if (style === "Original") drawOriginalStyle(ctx, size, isVertical, text);
+    if (style === "Dark") drawDarkStyle(ctx, size, isVertical, text);
+    if (style === "Cinematic") drawCinematicStyle(ctx, size, isVertical, text);
+    if (style === "Minimal") drawMinimalStyle(ctx, size, text);
+    if (style === "Chaos") drawChaosStyle(ctx, size, isVertical, text);
+    if (style === "Magazine") drawMagazineStyle(ctx, size, isVertical, text);
+  }
 
-    const canvas = canvasRef.current;
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+
+      image.src =
+        `${BACKEND_URL}/api/image-proxy?url=` + encodeURIComponent(src);
+    });
+  }
+
+  async function renderPromoToCanvas({
+    canvas,
+    product,
+    customFormat = format,
+    customStyle = designStyle,
+    customVariation = imageVariation,
+    customHook = hook
+  }) {
     const ctx = canvas.getContext("2d");
-    const size = getCanvasSize();
-    const settings = getVariationSettings();
+    const size = getCanvasSize(customFormat);
+    const settings = getVariationSettings(customStyle, customVariation);
 
     canvas.width = size.width;
     canvas.height = size.height;
@@ -628,35 +655,119 @@ function drawOriginalStyle(ctx, size, isVertical) {
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, size.width, size.height);
 
-    const image = new Image();
-    image.crossOrigin = "anonymous";
+    const image = await loadImage(product.imageUrl);
 
-    image.onload = () => {
-      const usedVariation = drawImageCover(ctx, image, size, settings);
+    const usedVariation = drawImageCover(ctx, image, size, settings);
 
-      const isVertical =
-        format === "TikTok" ||
-        format === "Instagram Story" ||
-        format === "Snapchat Story";
+    const isVertical =
+      customFormat === "TikTok" ||
+      customFormat === "Instagram Story" ||
+      customFormat === "Snapchat Story";
 
-      if (designStyle === "Original") drawOriginalStyle(ctx, size, isVertical);
-      if (designStyle === "Dark") drawDarkStyle(ctx, size, isVertical);
-      if (designStyle === "Cinematic") drawCinematicStyle(ctx, size, isVertical);
-      if (designStyle === "Minimal") drawMinimalStyle(ctx, size);
-      if (designStyle === "Chaos") drawChaosStyle(ctx, size, isVertical);
-      if (designStyle === "Magazine") drawMagazineStyle(ctx, size, isVertical);
+    drawStyle(ctx, size, customStyle, isVertical, customHook);
 
-      ctx.textAlign = "left";
-      setStatus(`Promo-bilde generert: ${designStyle} / ${usedVariation}`);
+    ctx.textAlign = "left";
+
+    return {
+      usedVariation,
+      dataUrl: canvas.toDataURL("image/png")
     };
+  }
 
-    image.onerror = () => {
+  async function generatePromoImage() {
+    if (!selectedProduct) return;
+
+    try {
+      const result = await renderPromoToCanvas({
+        canvas: canvasRef.current,
+        product: selectedProduct
+      });
+
+      setStatus(`Promo-bilde generert: ${designStyle} / ${result.usedVariation}`);
+    } catch {
       setStatus("Kunne ikke laste bilde");
-    };
+    }
+  }
 
-    image.src =
-      `${BACKEND_URL}/api/image-proxy?url=` +
-      encodeURIComponent(selectedProduct.imageUrl);
+  async function generateMockups() {
+    if (!selectedProduct) {
+      alert("Velg et produkt først");
+      return;
+    }
+
+    try {
+      setStatus("Genererer mockups...");
+
+      const mockupTemplates = [
+        {
+          name: "Original Product Shot",
+          style: "Original",
+          variation: "Center",
+          format: "Instagram Post",
+          hook: hook || `${selectedProduct.name} ute nu 👀`
+        },
+        {
+          name: "Dark Drop Poster",
+          style: "Dark",
+          variation: "Zoom",
+          format: "Instagram Post",
+          hook: "ny drop. samme kaos."
+        },
+        {
+          name: "Magazine Layout",
+          style: "Magazine",
+          variation: "Top",
+          format: "Instagram Story",
+          hook: "SlinCraze merch drop"
+        },
+        {
+          name: "Chaos Story",
+          style: "Chaos",
+          variation: "Chaos",
+          format: "Snapchat Story",
+          hook: "jatta jatta 😭🔥"
+        }
+      ];
+
+      const generated = [];
+
+      for (const template of mockupTemplates) {
+        const offscreenCanvas = document.createElement("canvas");
+
+        const result = await renderPromoToCanvas({
+          canvas: offscreenCanvas,
+          product: selectedProduct,
+          customFormat: template.format,
+          customStyle: template.style,
+          customVariation: template.variation,
+          customHook: template.hook
+        });
+
+        generated.push({
+          id: `${Date.now()}-${template.name}`,
+          name: template.name,
+          style: template.style,
+          variation: result.usedVariation,
+          format: template.format,
+          dataUrl: result.dataUrl
+        });
+      }
+
+      setMockups(generated);
+      setStatus("4 mockups generert 🔥");
+    } catch (error) {
+      console.error(error);
+      setStatus("Kunne ikke generere mockups");
+    }
+  }
+
+  function downloadMockup(mockup) {
+    const link = document.createElement("a");
+    link.download = `slincraze-mockup-${mockup.name
+      .toLowerCase()
+      .replaceAll(" ", "-")}.png`;
+    link.href = mockup.dataUrl;
+    link.click();
   }
 
   function downloadPromoImage() {
@@ -743,6 +854,24 @@ function drawOriginalStyle(ctx, size, isVertical) {
       gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))",
       gap: "14px",
       marginTop: "16px"
+    },
+    mockupGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+      gap: "14px",
+      marginTop: "18px"
+    },
+    mockupCard: {
+      background: "rgba(0,0,0,0.35)",
+      border: "1px solid rgba(255,255,255,0.12)",
+      borderRadius: "20px",
+      padding: "14px"
+    },
+    mockupImage: {
+      width: "100%",
+      borderRadius: "14px",
+      background: "#222",
+      border: "1px solid rgba(255,255,255,0.12)"
     },
     planCard: {
       background: "rgba(0,0,0,0.33)",
@@ -1044,6 +1173,10 @@ function drawOriginalStyle(ctx, size, isVertical) {
                 Last ned bilde
               </button>
 
+              <button style={styles.button} onClick={generateMockups}>
+                Generer mockups
+              </button>
+
               <button style={styles.facebookButton} onClick={publishToFacebookNow}>
                 Publiser til Facebook nå
               </button>
@@ -1057,6 +1190,40 @@ function drawOriginalStyle(ctx, size, isVertical) {
             />
 
             <canvas ref={canvasRef} style={styles.canvas} />
+
+            {mockups.length > 0 && (
+              <div style={{ marginTop: "28px" }}>
+                <h2 style={styles.sectionTitle}>Auto-generated mockups</h2>
+                <p style={styles.muted}>
+                  Fire ferdige varianter basert på valgt produkt.
+                </p>
+
+                <div style={styles.mockupGrid}>
+                  {mockups.map((mockup) => (
+                    <div key={mockup.id} style={styles.mockupCard}>
+                      <img
+                        src={mockup.dataUrl}
+                        alt={mockup.name}
+                        style={styles.mockupImage}
+                      />
+
+                      <h3 style={{ marginBottom: "6px" }}>{mockup.name}</h3>
+                      <p style={styles.muted}>{mockup.format}</p>
+                      <p style={styles.muted}>
+                        {mockup.style} / {mockup.variation}
+                      </p>
+
+                      <button
+                        style={styles.darkButton}
+                        onClick={() => downloadMockup(mockup)}
+                      >
+                        Last ned mockup
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         </main>
       </div>
