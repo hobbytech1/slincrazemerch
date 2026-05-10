@@ -4,19 +4,19 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import cron from "node-cron";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 const FACEBOOK_PAGE_ID = process.env.FACEBOOK_PAGE_ID;
 const FACEBOOK_PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
+const GOOGLE_SEARCH_API_KEY = process.env.GOOGLE_SEARCH_API_KEY;
+const GOOGLE_SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID;
+
 const GRAPH_VERSION = "v20.0";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const SCHEDULE_FILE = path.join(__dirname, "facebookSchedule.json");
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
@@ -72,37 +72,67 @@ app.get("/api/image-proxy", async (req, res) => {
   }
 });
 
-function readSchedule() {
-  if (!fs.existsSync(SCHEDULE_FILE)) {
-    return [];
-  }
-
+app.get("/api/slincraze/random-image", async (req, res) => {
   try {
-    return JSON.parse(fs.readFileSync(SCHEDULE_FILE, "utf8"));
-  } catch {
-    return [];
-  }
-}
+    if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
+      return res.status(500).json({
+        error: "Missing GOOGLE_SEARCH_API_KEY or GOOGLE_SEARCH_ENGINE_ID"
+      });
+    }
 
-function writeSchedule(posts) {
-  fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(posts, null, 2));
-}
+    const response = await axios.get(
+      "https://www.googleapis.com/customsearch/v1",
+      {
+        params: {
+          key: GOOGLE_SEARCH_API_KEY,
+          cx: GOOGLE_SEARCH_ENGINE_ID,
+          q: "SlinCraze",
+          searchType: "image",
+          num: 10,
+          safe: "active"
+        },
+        timeout: 30000
+      }
+    );
+
+    const images = response.data.items || [];
+
+    if (images.length === 0) {
+      return res.status(404).json({
+        error: "No SlinCraze images found"
+      });
+    }
+
+    const randomImage = images[Math.floor(Math.random() * images.length)];
+
+    res.json({
+      title: randomImage.title,
+      imageUrl: randomImage.link,
+      thumbnail: randomImage.image?.thumbnailLink,
+      sourceUrl: randomImage.image?.contextLink
+    });
+  } catch (error) {
+    console.error("Random SlinCraze image failed:", error.message);
+
+    res.status(500).json({
+      error: "Could not fetch random SlinCraze image"
+    });
+  }
+});
 
 async function publishFacebookPost(post) {
   if (!FACEBOOK_PAGE_ID || !FACEBOOK_PAGE_ACCESS_TOKEN) {
     throw new Error("Missing FACEBOOK_PAGE_ID or FACEBOOK_PAGE_ACCESS_TOKEN");
   }
 
-  const hasImage = Boolean(post.imageUrl);
-
-  const endpoint = hasImage
+  const endpoint = post.imageUrl
     ? `https://graph.facebook.com/${GRAPH_VERSION}/${FACEBOOK_PAGE_ID}/photos`
     : `https://graph.facebook.com/${GRAPH_VERSION}/${FACEBOOK_PAGE_ID}/feed`;
 
   const body = new URLSearchParams();
   body.append("access_token", FACEBOOK_PAGE_ACCESS_TOKEN);
 
-  if (hasImage) {
+  if (post.imageUrl) {
     body.append("url", post.imageUrl);
     body.append("caption", post.caption || "");
   } else {
@@ -122,40 +152,6 @@ async function publishFacebookPost(post) {
 
   return data;
 }
-
-app.post("/api/facebook/schedule", (req, res) => {
-  const { caption, imageUrl, scheduledTime, productName } = req.body;
-
-  if (!caption || !scheduledTime) {
-    return res.status(400).json({
-      error: "caption and scheduledTime are required"
-    });
-  }
-
-  const posts = readSchedule();
-
-  const newPost = {
-    id: Date.now().toString(),
-    caption,
-    imageUrl: imageUrl || "",
-    scheduledTime,
-    productName: productName || "",
-    status: "scheduled",
-    createdAt: new Date().toISOString()
-  };
-
-  posts.push(newPost);
-  writeSchedule(posts);
-
-  res.json({
-    success: true,
-    post: newPost
-  });
-});
-
-app.get("/api/facebook/schedule", (req, res) => {
-  res.json(readSchedule());
-});
 
 app.post("/api/facebook/publish-now", async (req, res) => {
   try {
@@ -187,47 +183,6 @@ app.post("/api/facebook/publish-now", async (req, res) => {
     });
   }
 });
-
-cron.schedule(
-  "* * * * *",
-  async () => {
-    const posts = readSchedule();
-    const now = new Date();
-
-    let changed = false;
-
-    for (const post of posts) {
-      if (post.status !== "scheduled") continue;
-
-      const scheduledDate = new Date(post.scheduledTime);
-
-      if (scheduledDate <= now) {
-        try {
-          const result = await publishFacebookPost(post);
-
-          post.status = "posted";
-          post.postedAt = new Date().toISOString();
-          post.facebookResult = result;
-
-          changed = true;
-        } catch (error) {
-          post.status = "failed";
-          post.error = error.message;
-          post.failedAt = new Date().toISOString();
-
-          changed = true;
-        }
-      }
-    }
-
-    if (changed) {
-      writeSchedule(posts);
-    }
-  },
-  {
-    timezone: "Europe/Oslo"
-  }
-);
 
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);
