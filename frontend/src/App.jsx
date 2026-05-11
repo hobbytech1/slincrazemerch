@@ -14,6 +14,7 @@ function App() {
   const [imageVariation, setImageVariation] = useState("Auto");
   const [dailyPlan, setDailyPlan] = useState([]);
   const [mockups, setMockups] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 900);
   const canvasRef = useRef(null);
 
   const selectedProduct = products[selectedIndex];
@@ -787,6 +788,14 @@ function App() {
     if (savedPlan) {
       setDailyPlan(JSON.parse(savedPlan));
     }
+
+    function handleResize() {
+      setIsMobile(window.innerWidth < 900);
+    }
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const styles = {
@@ -796,7 +805,7 @@ function App() {
         "radial-gradient(circle at top left, #2b2b2b, transparent 34%), linear-gradient(135deg, #050505, #141414)",
       color: "#f5f5f5",
       fontFamily: "Arial, sans-serif",
-      padding: "34px"
+      padding: isMobile ? "16px" : "34px"
     },
     shell: {
       maxWidth: "1280px",
@@ -804,8 +813,9 @@ function App() {
     },
     header: {
       display: "flex",
+      flexDirection: isMobile ? "column" : "row",
       justifyContent: "space-between",
-      alignItems: "center",
+      alignItems: isMobile ? "flex-start" : "center",
       gap: "20px",
       marginBottom: "28px"
     },
@@ -821,7 +831,7 @@ function App() {
     },
     title: {
       margin: 0,
-      fontSize: "44px",
+      fontSize: isMobile ? "30px" : "44px",
       letterSpacing: "-1.5px",
       color: "#fff"
     },
@@ -832,25 +842,29 @@ function App() {
     card: {
       background: "rgba(255,255,255,0.065)",
       border: "1px solid rgba(255,255,255,0.13)",
-      borderRadius: "26px",
-      padding: "24px",
+      borderRadius: isMobile ? "20px" : "26px",
+      padding: isMobile ? "16px" : "24px",
       boxShadow: "0 24px 70px rgba(0,0,0,0.38)",
       backdropFilter: "blur(10px)"
     },
     grid: {
       display: "grid",
-      gridTemplateColumns: "390px 1fr",
+      gridTemplateColumns: isMobile ? "1fr" : "390px 1fr",
       gap: "24px"
     },
     planGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))",
+      gridTemplateColumns: isMobile
+        ? "1fr"
+        : "repeat(auto-fit, minmax(235px, 1fr))",
       gap: "14px",
       marginTop: "16px"
     },
     mockupGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+      gridTemplateColumns: isMobile
+        ? "1fr"
+        : "repeat(auto-fit, minmax(190px, 1fr))",
       gap: "14px",
       marginTop: "18px"
     },
@@ -888,7 +902,8 @@ function App() {
       padding: "14px",
       fontSize: "15px",
       marginBottom: "18px",
-      outline: "none"
+      outline: "none",
+      boxSizing: "border-box"
     },
     image: {
       width: "100%",
@@ -903,7 +918,8 @@ function App() {
       borderRadius: "15px",
       padding: "12px 16px",
       cursor: "pointer",
-      fontWeight: "800"
+      fontWeight: "800",
+      width: isMobile ? "100%" : "auto"
     },
     facebookButton: {
       background: "#1877F2",
@@ -912,7 +928,8 @@ function App() {
       borderRadius: "15px",
       padding: "12px 16px",
       cursor: "pointer",
-      fontWeight: "800"
+      fontWeight: "800",
+      width: isMobile ? "100%" : "auto"
     },
     darkButton: {
       background: "rgba(255,255,255,0.06)",
@@ -921,13 +938,15 @@ function App() {
       borderRadius: "15px",
       padding: "12px 16px",
       cursor: "pointer",
-      fontWeight: "800"
+      fontWeight: "800",
+      width: isMobile ? "100%" : "auto"
     },
     buttons: {
       display: "flex",
       gap: "10px",
       flexWrap: "wrap",
-      marginTop: "16px"
+      marginTop: "16px",
+      width: "100%"
     },
     textarea: {
       width: "100%",
@@ -946,11 +965,12 @@ function App() {
       display: "flex",
       gap: "10px",
       flexWrap: "wrap",
-      marginBottom: "20px"
+      marginBottom: "20px",
+      width: "100%"
     },
     canvas: {
       width: "100%",
-      maxWidth: "520px",
+      maxWidth: isMobile ? "100%" : "520px",
       background: "#222",
       borderRadius: "22px",
       marginTop: "22px",
